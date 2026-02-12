@@ -66,7 +66,8 @@ export async function request(url, options = {}) {
       throw new ApiError(
         result.message || '操作失败',
         response.status,
-        result.code
+        result.code,
+        result.data
       )
     }
 
@@ -86,13 +87,16 @@ export async function request(url, options = {}) {
 
 /**
  * Custom error class for API errors.
+ * Carries `data` from the response body so callers can inspect business-level
+ * fields (e.g. captchaRequired) even on error responses.
  */
 export class ApiError extends Error {
-  constructor(message, httpStatus, code) {
+  constructor(message, httpStatus, code, data) {
     super(message)
     this.name = 'ApiError'
     this.httpStatus = httpStatus
     this.code = code
+    this.data = data ?? null
   }
 }
 

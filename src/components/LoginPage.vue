@@ -17,6 +17,7 @@ import {
   pollWechatQr,
   generateWechatMp,
   pollWechatMp,
+  getCaptcha,
 } from '../api/auth.js'
 import { QR_POLL_INTERVAL } from '../api/config.js'
 
@@ -28,6 +29,13 @@ const phoneCodeLoading = ref(false)
 const phoneLoginLoading = ref(false)
 const emailCodeLoading = ref(false)
 const emailLoginLoading = ref(false)
+
+// Captcha state (shared between phone and email login)
+const captchaRequired = ref(false)
+const captchaId = ref('')
+const captchaCode = ref('')
+const captchaImage = ref('')
+const captchaLoading = ref(false)
 
 // Phone login form
 const phoneForm = reactive({
@@ -112,8 +120,16 @@ const emailCodeError = computed(() => {
 /**
  * Handle API errors with user-friendly messages.
  * Shows backend error message for business errors, friendly fallback for 500s.
+ * If the error carries captchaRequired, triggers captcha flow.
  */
 function handleApiError(error) {
+  // Check if captcha is now required (from error.data)
+  if (error && error.data && error.data.captchaRequired) {
+    captchaRequired.value = true
+    captchaCode.value = ''
+    fetchCaptcha()
+  }
+
   if (error && error.httpStatus >= 500) {
     ElMessage.error('服务器繁忙，请稍后重试')
   } else if (error && error.message) {
@@ -121,6 +137,29 @@ function handleApiError(error) {
   } else {
     ElMessage.error('操作失败，请稍后重试')
   }
+}
+
+// Fetch a new captcha image
+async function fetchCaptcha() {
+  captchaLoading.value = true
+  try {
+    const res = await getCaptcha()
+    captchaId.value = res.data.captchaId
+    captchaImage.value = res.data.captchaImage
+    captchaCode.value = ''
+  } catch (err) {
+    ElMessage.error('获取图形验证码失败，请重试')
+    if (import.meta.env.DEV) {
+      console.warn('[Captcha] Error:', err.message || err)
+    }
+  } finally {
+    captchaLoading.value = false
+  }
+}
+
+// Refresh captcha image (click handler)
+function refreshCaptcha() {
+  fetchCaptcha()
 }
 
 // Start countdown timer for code resend
@@ -200,12 +239,21 @@ async function handlePhoneLogin() {
     ElMessage.warning('请输入验证码')
     return
   }
+  if (captchaRequired.value && !captchaCode.value) {
+    ElMessage.warning('请输入图形验证码')
+    return
+  }
   if (phoneLoginLoading.value) return
 
   phoneLoginLoading.value = true
   try {
-    const res = await smsLogin(phoneForm.phone, phoneForm.code)
+    const res = await smsLogin(
+      phoneForm.phone, phoneForm.code,
+      captchaRequired.value ? captchaId.value : undefined,
+      captchaRequired.value ? captchaCode.value : undefined
+    )
     ElMessage.success(res.message || '登录成功')
+    captchaRequired.value = false
     handleLoginSuccess(res.data)
   } catch (error) {
     handleApiError(error)
@@ -226,12 +274,21 @@ async function handleEmailLogin() {
     ElMessage.warning('请输入验证码')
     return
   }
+  if (captchaRequired.value && !captchaCode.value) {
+    ElMessage.warning('请输入图形验证码')
+    return
+  }
   if (emailLoginLoading.value) return
 
   emailLoginLoading.value = true
   try {
-    const res = await emailLogin(emailForm.email, emailForm.code)
+    const res = await emailLogin(
+      emailForm.email, emailForm.code,
+      captchaRequired.value ? captchaId.value : undefined,
+      captchaRequired.value ? captchaCode.value : undefined
+    )
     ElMessage.success(res.message || '登录成功')
+    captchaRequired.value = false
     handleLoginSuccess(res.data)
   } catch (error) {
     handleApiError(error)
@@ -511,11 +568,33 @@ onBeforeUnmount(() => {
                 </el-button>
               </div>
             </el-form-item>
+            <el-form-item v-if="captchaRequired">
+              <div class="captcha-input-group">
+                <el-input
+                  v-model="captchaCode"
+                  placeholder="请输入图形验证码"
+                  maxlength="6"
+                  clearable
+                  @keyup.enter="handlePhoneLogin"
+                />
+                <div class="captcha-image-wrapper" @click="refreshCaptcha">
+                  <img
+                    v-if="captchaImage"
+                    :src="captchaImage"
+                    alt="图形验证码"
+                    class="captcha-image"
+                  />
+                  <div v-else class="captcha-placeholder">
+                    <el-icon :loading="captchaLoading"><Refresh /></el-icon>
+                  </div>
+                </div>
+              </div>
+            </el-form-item>
             <el-form-item>
               <el-button
                 type="primary"
                 class="login-btn"
-                :disabled="!isValidPhone || !phoneForm.code"
+                :disabled="!isValidPhone || !phoneForm.code || (captchaRequired && !captchaCode)"
                 :loading="phoneLoginLoading"
                 @click="handlePhoneLogin"
               >
@@ -577,11 +656,33 @@ onBeforeUnmount(() => {
                 </el-button>
               </div>
             </el-form-item>
+            <el-form-item v-if="captchaRequired">
+              <div class="captcha-input-group">
+                <el-input
+                  v-model="captchaCode"
+                  placeholder="请输入图形验证码"
+                  maxlength="6"
+                  clearable
+                  @keyup.enter="handleEmailLogin"
+                />
+                <div class="captcha-image-wrapper" @click="refreshCaptcha">
+                  <img
+                    v-if="captchaImage"
+                    :src="captchaImage"
+                    alt="图形验证码"
+                    class="captcha-image"
+                  />
+                  <div v-else class="captcha-placeholder">
+                    <el-icon :loading="captchaLoading"><Refresh /></el-icon>
+                  </div>
+                </div>
+              </div>
+            </el-form-item>
             <el-form-item>
               <el-button
                 type="primary"
                 class="login-btn"
-                :disabled="!isValidEmail || !emailForm.code"
+                :disabled="!isValidEmail || !emailForm.code || (captchaRequired && !captchaCode)"
                 :loading="emailLoginLoading"
                 @click="handleEmailLogin"
               >
@@ -1023,6 +1124,50 @@ onBeforeUnmount(() => {
   font-size: 13px;
 }
 
+.captcha-input-group {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  align-items: center;
+}
+
+.captcha-input-group .el-input {
+  flex: 1;
+}
+
+.captcha-image-wrapper {
+  flex-shrink: 0;
+  width: 130px;
+  height: 40px;
+  cursor: pointer;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid #dcdfe6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f7fa;
+}
+
+.captcha-image-wrapper:hover {
+  border-color: #6366f1;
+}
+
+.captcha-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.captcha-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #909399;
+  font-size: 20px;
+}
+
 .login-btn {
   width: 100%;
   height: 48px;
@@ -1284,6 +1429,15 @@ onBeforeUnmount(() => {
 
   .code-btn {
     width: 100%;
+  }
+
+  .captcha-input-group {
+    flex-direction: column;
+  }
+
+  .captcha-image-wrapper {
+    width: 100%;
+    height: 44px;
   }
 
   .alt-login-label::before,

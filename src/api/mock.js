@@ -45,6 +45,99 @@ function mockLoginSuccess() {
 /** Store for mock verification codes (phone/email -> code) */
 const mockCodes = new Map()
 
+/** Track login failure counts per account to trigger captcha */
+const loginFailures = new Map()
+const CAPTCHA_THRESHOLD = 3
+
+/** Store for mock captcha (captchaId -> expected text) */
+const mockCaptchas = new Map()
+let captchaIdCounter = 0
+
+// ---- Captcha APIs ----
+
+export async function mockGetCaptcha() {
+  await delay(300)
+  captchaIdCounter++
+  const captchaId = `captcha-${captchaIdCounter}`
+  const captchaText = String(Math.floor(1000 + Math.random() * 9000))
+  mockCaptchas.set(captchaId, captchaText)
+  console.info(`[Mock] Captcha ${captchaId}: ${captchaText}`)
+  return {
+    code: '200',
+    message: '验证码获取成功',
+    data: {
+      captchaId,
+      // In real backend this would be a base64 image; here we use a simple SVG
+      captchaImage: generateMockCaptchaSvg(captchaText),
+    },
+  }
+}
+
+/** Generate a simple SVG captcha image for mock purposes */
+function generateMockCaptchaSvg(text) {
+  const chars = text.split('')
+  const textElements = chars.map((ch, i) => {
+    const x = 20 + i * 28
+    const y = 28 + Math.floor(Math.random() * 10)
+    const rotate = Math.floor(Math.random() * 30) - 15
+    return `<text x="${x}" y="${y}" font-size="24" font-weight="bold" fill="#335" transform="rotate(${rotate},${x},${y})">${ch}</text>`
+  }).join('')
+  const lines = Array.from({ length: 3 }, () => {
+    const x1 = Math.floor(Math.random() * 120)
+    const y1 = Math.floor(Math.random() * 40)
+    const x2 = Math.floor(Math.random() * 120)
+    const y2 = Math.floor(Math.random() * 40)
+    return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#aab" stroke-width="1"/>`
+  }).join('')
+  return `data:image/svg+xml;base64,${btoa(`<svg xmlns="http://www.w3.org/2000/svg" width="130" height="40"><rect width="130" height="40" fill="#e8ecf0" rx="4"/>${lines}${textElements}</svg>`)}`
+}
+
+/** Validate captcha and remove it from the store */
+function validateMockCaptcha(captchaId, captchaCode) {
+  if (!captchaId || !captchaCode) return false
+  const expected = mockCaptchas.get(captchaId)
+  mockCaptchas.delete(captchaId)
+  return expected === captchaCode
+}
+
+/** Get the failure key for tracking */
+function failureKey(type, account) {
+  return `${type}:${account}`
+}
+
+/** Check if captcha is required and build the login-failure response */
+function buildLoginFailure(type, account, message, captchaId, captchaCode) {
+  const key = failureKey(type, account)
+  const failures = (loginFailures.get(key) || 0) + 1
+  loginFailures.set(key, failures)
+
+  // If captcha was required but not provided or invalid, always require captcha
+  const needCaptcha = failures >= CAPTCHA_THRESHOLD
+
+  // If captcha was supplied, validate it
+  if (captchaId && needCaptcha) {
+    if (!validateMockCaptcha(captchaId, captchaCode)) {
+      return {
+        code: '400002',
+        message: '图形验证码错误',
+        data: { captchaRequired: true },
+      }
+    }
+  }
+
+  const response = {
+    code: '400001',
+    message,
+    data: needCaptcha ? { captchaRequired: true } : null,
+  }
+  return response
+}
+
+/** Reset failure count on successful login */
+function clearFailures(type, account) {
+  loginFailures.delete(failureKey(type, account))
+}
+
 // ---- SMS APIs ----
 
 export async function mockSendSmsCode(phone) {
@@ -59,18 +152,36 @@ export async function mockSendSmsCode(phone) {
   }
 }
 
-export async function mockSmsLogin(phone, code) {
+export async function mockSmsLogin(phone, code, captchaId, captchaCode) {
   await delay(800)
   const storedCode = mockCodes.get(`sms:${phone}`)
   // Accept any code in mock mode if no code was stored (for convenience)
   if (storedCode && storedCode !== code) {
-    return {
-      code: '400001',
-      message: '验证码错误或已过期',
-      data: null,
+    return buildLoginFailure('sms', phone, '验证码错误或已过期', captchaId, captchaCode)
+  }
+
+  // If captcha is required, validate it
+  const key = failureKey('sms', phone)
+  const failures = loginFailures.get(key) || 0
+  if (failures >= CAPTCHA_THRESHOLD) {
+    if (!captchaId || !captchaCode) {
+      return {
+        code: '400002',
+        message: '请输入图形验证码',
+        data: { captchaRequired: true },
+      }
+    }
+    if (!validateMockCaptcha(captchaId, captchaCode)) {
+      return {
+        code: '400002',
+        message: '图形验证码错误',
+        data: { captchaRequired: true },
+      }
     }
   }
+
   mockCodes.delete(`sms:${phone}`)
+  clearFailures('sms', phone)
   return mockLoginSuccess()
 }
 
@@ -88,17 +199,35 @@ export async function mockSendEmailCode(email) {
   }
 }
 
-export async function mockEmailLogin(email, code) {
+export async function mockEmailLogin(email, code, captchaId, captchaCode) {
   await delay(800)
   const storedCode = mockCodes.get(`email:${email}`)
   if (storedCode && storedCode !== code) {
-    return {
-      code: '400001',
-      message: '验证码错误或已过期',
-      data: null,
+    return buildLoginFailure('email', email, '验证码错误或已过期', captchaId, captchaCode)
+  }
+
+  // If captcha is required, validate it
+  const key = failureKey('email', email)
+  const failures = loginFailures.get(key) || 0
+  if (failures >= CAPTCHA_THRESHOLD) {
+    if (!captchaId || !captchaCode) {
+      return {
+        code: '400002',
+        message: '请输入图形验证码',
+        data: { captchaRequired: true },
+      }
+    }
+    if (!validateMockCaptcha(captchaId, captchaCode)) {
+      return {
+        code: '400002',
+        message: '图形验证码错误',
+        data: { captchaRequired: true },
+      }
     }
   }
+
   mockCodes.delete(`email:${email}`)
+  clearFailures('email', email)
   return mockLoginSuccess()
 }
 
