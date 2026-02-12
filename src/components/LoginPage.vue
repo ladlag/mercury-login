@@ -1069,11 +1069,31 @@ onBeforeUnmount(() => {
 
   .login-banner {
     flex: none;
-    padding: 32px 24px;
+    padding: 14px 20px;
+  }
+
+  .banner-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0;
+    text-align: left;
+  }
+
+  .brand-icon {
+    width: 32px;
+    height: 32px;
+    margin: 0;
+    flex-shrink: 0;
+  }
+
+  .brand-title {
+    font-size: 18px;
+    margin-bottom: 0;
   }
 
   .brand-subtitle {
-    margin-bottom: 0;
+    display: none;
   }
 
   .brand-features {
