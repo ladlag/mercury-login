@@ -249,36 +249,36 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="login-container">
-    <!-- Left decorative area -->
-    <div class="login-banner">
-      <div class="banner-content">
-        <div class="brand-icon">
-          <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="32" cy="32" r="30" stroke="white" stroke-width="2" fill="rgba(255,255,255,0.15)" />
-            <path d="M20 32 L28 40 L44 24" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" />
-          </svg>
-        </div>
-        <h1 class="brand-title">Mercury</h1>
-        <p class="brand-subtitle">统一身份认证平台</p>
-        <div class="brand-features">
-          <div class="feature-item">
-            <span class="feature-dot"></span>
-            <span>安全可靠的登录认证</span>
+    <div class="login-wrapper">
+      <!-- Left decorative banner (inside card) -->
+      <div class="login-banner">
+        <div class="banner-content">
+          <div class="brand-icon">
+            <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="32" cy="32" r="30" stroke="white" stroke-width="2" fill="rgba(255,255,255,0.15)" />
+              <path d="M20 32 L28 40 L44 24" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+            </svg>
           </div>
-          <div class="feature-item">
-            <span class="feature-dot"></span>
-            <span>多种登录方式自由选择</span>
-          </div>
-          <div class="feature-item">
-            <span class="feature-dot"></span>
-            <span>一次登录，多端通行</span>
+          <h1 class="brand-title">Mercury</h1>
+          <p class="brand-subtitle">统一身份认证平台</p>
+          <div class="brand-features">
+            <div class="feature-item">
+              <span class="feature-dot"></span>
+              <span>安全可靠的登录认证</span>
+            </div>
+            <div class="feature-item">
+              <span class="feature-dot"></span>
+              <span>多种登录方式自由选择</span>
+            </div>
+            <div class="feature-item">
+              <span class="feature-dot"></span>
+              <span>一次登录，多端通行</span>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Right login area -->
-    <div class="login-panel">
+      <!-- Right login card -->
       <div class="login-card">
         <h2 class="login-title">欢迎登录</h2>
         <p class="login-desc">请选择以下方式登录您的账号</p>
@@ -661,24 +661,11 @@ onBeforeUnmount(() => {
           <a href="javascript:void(0)">《隐私政策》</a>
         </div>
       </div>
+    </div>
 
-      <!-- Ad placement area (reserved for future use) -->
-      <div class="ad-slot">
-        <!-- 
-          广告位预留区域
-          建议尺寸：宽度跟随登录卡片，高度 60-90px
-          适合展示：横幅广告、合作伙伴 Logo、活动推广等
-          示例：<img src="ad-banner.png" alt="广告" class="ad-banner" />
-        -->
-        <div class="ad-placeholder">
-          <span>— 合作伙伴 —</span>
-        </div>
-      </div>
-
-      <!-- Footer -->
-      <div class="login-footer">
-        <span>© {{ new Date().getFullYear() }} Mercury · 统一登录平台</span>
-      </div>
+    <!-- Footer -->
+    <div class="login-footer">
+      <span>© {{ new Date().getFullYear() }} Mercury · 统一登录平台</span>
     </div>
   </div>
 </template>
@@ -686,15 +673,29 @@ onBeforeUnmount(() => {
 <style scoped>
 .login-container {
   display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   width: 100%;
-  height: 100vh;
+  min-height: 100vh;
   background: #eef1f6;
+  padding: 24px;
 }
 
-/* Left banner */
+/* Wrapper: banner + card side by side */
+.login-wrapper {
+  display: flex;
+  max-width: 920px;
+  width: 100%;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.1);
+}
+
+/* Left banner (inside wrapper, same height as card) */
 .login-banner {
-  flex: 0 0 380px;
-  background: linear-gradient(135deg, #4c63d2 0%, #6b3fa0 100%);
+  flex: 0 0 320px;
+  background: linear-gradient(135deg, #7c8cf5 0%, #a78bfa 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -709,8 +710,8 @@ onBeforeUnmount(() => {
   left: -50%;
   width: 200%;
   height: 200%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
-  background-size: 30px 30px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  background-size: 28px 28px;
 }
 
 .banner-content {
@@ -718,13 +719,13 @@ onBeforeUnmount(() => {
   z-index: 1;
   text-align: center;
   color: #fff;
-  padding: 40px;
+  padding: 40px 32px;
 }
 
 .brand-icon {
-  width: 80px;
-  height: 80px;
-  margin: 0 auto 24px;
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 20px;
 }
 
 .brand-icon svg {
@@ -733,16 +734,16 @@ onBeforeUnmount(() => {
 }
 
 .brand-title {
-  font-size: 36px;
+  font-size: 32px;
   font-weight: 700;
   letter-spacing: 2px;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .brand-subtitle {
-  font-size: 16px;
-  opacity: 0.85;
-  margin-bottom: 48px;
+  font-size: 14px;
+  opacity: 0.9;
+  margin-bottom: 40px;
 }
 
 .brand-features {
@@ -752,10 +753,10 @@ onBeforeUnmount(() => {
 .feature-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-size: 14px;
+  gap: 10px;
+  font-size: 13px;
   opacity: 0.9;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .feature-dot {
@@ -766,24 +767,11 @@ onBeforeUnmount(() => {
   flex-shrink: 0;
 }
 
-/* Right panel */
-.login-panel {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 24px 40px;
-  min-height: 100vh;
-}
-
+/* Right login card */
 .login-card {
-  width: 100%;
-  max-width: 520px;
+  flex: 1;
   background: #fff;
-  border-radius: 16px;
   padding: 48px 44px 36px;
-  box-shadow: 0 6px 30px rgba(0, 0, 0, 0.1);
 }
 
 .login-title {
@@ -826,12 +814,12 @@ onBeforeUnmount(() => {
 }
 
 .tab-item:hover {
-  color: #4c63d2;
+  color: #6366f1;
 }
 
 .tab-item.active {
   background: #fff;
-  color: #4c63d2;
+  color: #6366f1;
   font-weight: 500;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
@@ -867,14 +855,14 @@ onBeforeUnmount(() => {
   font-size: 16px;
   font-weight: 500;
   border-radius: 10px;
-  background: linear-gradient(135deg, #4c63d2 0%, #6b3fa0 100%);
+  background: linear-gradient(135deg, #7c8cf5 0%, #a78bfa 100%);
   border: none;
   letter-spacing: 4px;
 }
 
 .login-btn:hover,
 .login-btn:focus {
-  background: linear-gradient(135deg, #3f54c0 0%, #5e3590 100%);
+  background: linear-gradient(135deg, #6d7ef0 0%, #9b7bf5 100%);
 }
 
 .input-prefix {
@@ -1008,11 +996,11 @@ onBeforeUnmount(() => {
 }
 
 .alt-link:hover {
-  color: #4c63d2;
+  color: #6366f1;
 }
 
 .alt-link:focus {
-  outline: 2px solid #4c63d2;
+  outline: 2px solid #6366f1;
   outline-offset: 2px;
   border-radius: 4px;
 }
@@ -1031,7 +1019,7 @@ onBeforeUnmount(() => {
 }
 
 .login-agreement a {
-  color: #4c63d2;
+  color: #6366f1;
   text-decoration: none;
 }
 
@@ -1041,74 +1029,61 @@ onBeforeUnmount(() => {
 
 /* Footer */
 .login-footer {
-  margin-top: 20px;
+  margin-top: 24px;
   font-size: 12px;
   color: #9ca3af;
 }
 
-/* Ad placement slot */
-.ad-slot {
-  width: 100%;
-  max-width: 520px;
-  margin-top: 20px;
-}
-
-.ad-placeholder {
-  text-align: center;
-  padding: 16px;
-  color: #c0c4cc;
-  font-size: 12px;
-  border-top: 1px solid #e5e7eb;
-}
-
 /* Responsive - Tablet (iPad) */
-@media (min-width: 768px) and (max-width: 1024px) {
+@media (max-width: 900px) {
   .login-banner {
-    flex: 0 0 280px;
+    flex: 0 0 240px;
   }
 
   .banner-content {
-    padding: 24px;
+    padding: 32px 20px;
   }
 
   .brand-title {
-    font-size: 28px;
+    font-size: 26px;
   }
 
   .brand-subtitle {
-    font-size: 14px;
-    margin-bottom: 32px;
-  }
-
-  .feature-item {
-    font-size: 13px;
-  }
-
-  .login-panel {
-    padding: 20px 32px;
+    margin-bottom: 28px;
   }
 
   .login-card {
-    max-width: 460px;
+    padding: 36px 28px 28px;
   }
 }
 
 /* Responsive - Mobile */
-@media (max-width: 900px) {
-  .login-banner {
-    display: none;
+@media (max-width: 640px) {
+  .login-container {
+    padding: 16px;
   }
 
-  .login-panel {
-    padding: 20px;
+  .login-wrapper {
+    flex-direction: column;
+  }
+
+  .login-banner {
+    flex: none;
+    padding: 32px 24px;
+  }
+
+  .brand-subtitle {
+    margin-bottom: 0;
+  }
+
+  .brand-features {
+    display: none;
   }
 
   .login-card {
     padding: 32px 24px 28px;
   }
-}
 
-@media (max-width: 480px) {
   .code-input-group {
     flex-direction: column;
   }
@@ -1142,9 +1117,9 @@ onBeforeUnmount(() => {
 }
 
 :deep(.el-button--primary.is-plain) {
-  --el-button-hover-bg-color: #4c63d2;
-  --el-button-hover-border-color: #4c63d2;
-  color: #4c63d2;
-  border-color: #4c63d2;
+  --el-button-hover-bg-color: #6366f1;
+  --el-button-hover-border-color: #6366f1;
+  color: #6366f1;
+  border-color: #6366f1;
 }
 </style>
