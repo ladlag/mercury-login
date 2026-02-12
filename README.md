@@ -1,13 +1,5 @@
-# mercury-login
-这是一个通用登录前端项目，
-场景：用户从A、B、C三个项目点击登录后跳转到当前项目登录页面，完成登录后携带token回到原来的项目中
-功能：
-支持手机验证码登录（手机号校验、发送验证码读秒、信息提示等）
-支持微信扫码关注公众号登录（二维码过期、扫描成功提示等）
-支持微信扫码登录（二维码过期、扫描成功提示等）
-支持邮箱验证码登录（手机号校验、发送验证码、信息提示等）
+# Vue 3 + Vite
 
-要求：
-1、页面美观、布局合理、色调主流，简约不简单有质感
-2、尽量使用主流的前端框架样式，避免自己从头开发
-3、可以参靠中国主流厂商的登录页设计，如阿里、百度、腾讯、抖音、小红书等等，不增加用户理解成本
+This template should help get you started developing with Vue 3 in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+
+Learn more about IDE Support for Vue in the [Vue Docs Scaling up Guide](https://vuejs.org/guide/scaling-up/tooling.html#ide-support).
