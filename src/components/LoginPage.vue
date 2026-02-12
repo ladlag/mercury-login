@@ -8,9 +8,26 @@ import {
   Promotion,
   Refresh,
 } from '@element-plus/icons-vue'
+import {
+  sendSmsCode,
+  smsLogin,
+  sendEmailCode as apiSendEmailCode,
+  emailLogin,
+  generateWechatQr,
+  pollWechatQr,
+  generateWechatMp,
+  pollWechatMp,
+} from '../api/auth.js'
+import { QR_POLL_INTERVAL } from '../api/config.js'
 
 // Current login method: phone | email | wechat-qr | wechat-mp
 const activeTab = ref('phone')
+
+// Loading states to prevent duplicate submissions
+const phoneCodeLoading = ref(false)
+const phoneLoginLoading = ref(false)
+const emailCodeLoading = ref(false)
+const emailLoginLoading = ref(false)
 
 // Phone login form
 const phoneForm = reactive({
@@ -34,11 +51,15 @@ const emailTouched = reactive({ email: false, code: false })
 const wechatQrExpired = ref(false)
 const wechatQrScanned = ref(false)
 let wechatQrTimer = null
+let wechatQrPollTimer = null
+let wechatQrTicket = null
 
 // WeChat MP (public account) login
 const wechatMpExpired = ref(false)
 const wechatMpScanned = ref(false)
 let wechatMpTimer = null
+let wechatMpPollTimer = null
+let wechatMpTicket = null
 
 // Get redirect URL from query params
 const redirectUrl = computed(() => {
@@ -88,50 +109,87 @@ const emailCodeError = computed(() => {
   return ''
 })
 
+/**
+ * Handle API errors with user-friendly messages.
+ * Shows backend error message for business errors, friendly fallback for 500s.
+ */
+function handleApiError(error) {
+  if (error && error.httpStatus >= 500) {
+    ElMessage.error('服务器繁忙，请稍后重试')
+  } else if (error && error.message) {
+    ElMessage.error(error.message)
+  } else {
+    ElMessage.error('操作失败，请稍后重试')
+  }
+}
+
+// Start countdown timer for code resend
+function startCountdown(type) {
+  if (type === 'phone') {
+    phoneCodeCountdown.value = 60
+    phoneTimer = setInterval(() => {
+      phoneCodeCountdown.value--
+      if (phoneCodeCountdown.value <= 0) {
+        clearInterval(phoneTimer)
+        phoneTimer = null
+      }
+    }, 1000)
+  } else {
+    emailCodeCountdown.value = 60
+    emailTimer = setInterval(() => {
+      emailCodeCountdown.value--
+      if (emailCodeCountdown.value <= 0) {
+        clearInterval(emailTimer)
+        emailTimer = null
+      }
+    }, 1000)
+  }
+}
+
 // Send phone verification code
-function sendPhoneCode() {
+async function sendPhoneCode() {
   phoneTouched.phone = true
   if (!isValidPhone.value) {
     ElMessage.warning('请输入正确的手机号码')
     return
   }
-  if (phoneCodeCountdown.value > 0) return
+  if (phoneCodeCountdown.value > 0 || phoneCodeLoading.value) return
 
-  // Simulate sending code
-  ElMessage.success('验证码已发送至 ' + phoneForm.phone)
-  phoneCodeCountdown.value = 60
-  phoneTimer = setInterval(() => {
-    phoneCodeCountdown.value--
-    if (phoneCodeCountdown.value <= 0) {
-      clearInterval(phoneTimer)
-      phoneTimer = null
-    }
-  }, 1000)
+  phoneCodeLoading.value = true
+  try {
+    const res = await sendSmsCode(phoneForm.phone)
+    ElMessage.success(res.message || '验证码已发送')
+    startCountdown('phone')
+  } catch (error) {
+    handleApiError(error)
+  } finally {
+    phoneCodeLoading.value = false
+  }
 }
 
 // Send email verification code
-function sendEmailCode() {
+async function sendEmailCode() {
   emailTouched.email = true
   if (!isValidEmail.value) {
     ElMessage.warning('请输入正确的邮箱地址')
     return
   }
-  if (emailCodeCountdown.value > 0) return
+  if (emailCodeCountdown.value > 0 || emailCodeLoading.value) return
 
-  // Simulate sending code
-  ElMessage.success('验证码已发送至 ' + emailForm.email)
-  emailCodeCountdown.value = 60
-  emailTimer = setInterval(() => {
-    emailCodeCountdown.value--
-    if (emailCodeCountdown.value <= 0) {
-      clearInterval(emailTimer)
-      emailTimer = null
-    }
-  }, 1000)
+  emailCodeLoading.value = true
+  try {
+    const res = await apiSendEmailCode(emailForm.email)
+    ElMessage.success(res.message || '验证码已发送')
+    startCountdown('email')
+  } catch (error) {
+    handleApiError(error)
+  } finally {
+    emailCodeLoading.value = false
+  }
 }
 
 // Phone login submit
-function handlePhoneLogin() {
+async function handlePhoneLogin() {
   phoneTouched.phone = true
   phoneTouched.code = true
   if (!isValidPhone.value) {
@@ -142,13 +200,22 @@ function handlePhoneLogin() {
     ElMessage.warning('请输入验证码')
     return
   }
-  // Simulate login success
-  ElMessage.success('登录成功')
-  handleLoginSuccess('mock-token-phone-' + Date.now())
+  if (phoneLoginLoading.value) return
+
+  phoneLoginLoading.value = true
+  try {
+    const res = await smsLogin(phoneForm.phone, phoneForm.code)
+    ElMessage.success(res.message || '登录成功')
+    handleLoginSuccess(res.data)
+  } catch (error) {
+    handleApiError(error)
+  } finally {
+    phoneLoginLoading.value = false
+  }
 }
 
 // Email login submit
-function handleEmailLogin() {
+async function handleEmailLogin() {
   emailTouched.email = true
   emailTouched.code = true
   if (!isValidEmail.value) {
@@ -159,63 +226,159 @@ function handleEmailLogin() {
     ElMessage.warning('请输入验证码')
     return
   }
-  // Simulate login success
-  ElMessage.success('登录成功')
-  handleLoginSuccess('mock-token-email-' + Date.now())
+  if (emailLoginLoading.value) return
+
+  emailLoginLoading.value = true
+  try {
+    const res = await emailLogin(emailForm.email, emailForm.code)
+    ElMessage.success(res.message || '登录成功')
+    handleLoginSuccess(res.data)
+  } catch (error) {
+    handleApiError(error)
+  } finally {
+    emailLoginLoading.value = false
+  }
 }
 
-// Handle login success - redirect with token
-function handleLoginSuccess(token) {
+// Handle login success - redirect with token and tenant info
+function handleLoginSuccess(data) {
+  const { token, tenantId } = data
   if (redirectUrl.value) {
-    const separator = redirectUrl.value.includes('?') ? '&' : '?'
-    window.location.href = redirectUrl.value + separator + 'token=' + encodeURIComponent(token)
+    const url = new URL(redirectUrl.value)
+    url.searchParams.set('token', token)
+    if (tenantId) {
+      url.searchParams.set('tenantId', tenantId)
+    }
+    window.location.href = url.toString()
   } else {
     ElMessage.info('登录成功，Token: ' + token)
   }
 }
 
-// Switch to WeChat QR tab
-function initWechatQr() {
+// Stop polling for QR code status
+function stopQrPolling(type) {
+  if (type === 'qr') {
+    clearInterval(wechatQrPollTimer)
+    wechatQrPollTimer = null
+  } else {
+    clearInterval(wechatMpPollTimer)
+    wechatMpPollTimer = null
+  }
+}
+
+// Start polling for WeChat QR scan status
+function startQrPolling(type) {
+  stopQrPolling(type)
+  const pollFn = type === 'qr' ? pollWechatQr : pollWechatMp
+  const ticket = type === 'qr' ? wechatQrTicket : wechatMpTicket
+  const scannedRef = type === 'qr' ? wechatQrScanned : wechatMpScanned
+  const expiredRef = type === 'qr' ? wechatQrExpired : wechatMpExpired
+
+  const timerId = setInterval(async () => {
+    if (expiredRef.value) {
+      stopQrPolling(type)
+      return
+    }
+    try {
+      const res = await pollFn(ticket)
+      const status = res.data && res.data.status
+      if (status === 'scanned') {
+        scannedRef.value = true
+      } else if (status === 'confirmed') {
+        stopQrPolling(type)
+        ElMessage.success(res.message || '登录成功')
+        handleLoginSuccess(res.data)
+      }
+    } catch {
+      // Silently ignore poll errors; will retry on next interval
+    }
+  }, QR_POLL_INTERVAL)
+
+  if (type === 'qr') {
+    wechatQrPollTimer = timerId
+  } else {
+    wechatMpPollTimer = timerId
+  }
+}
+
+// Initialize WeChat QR code
+async function initWechatQr() {
   wechatQrExpired.value = false
   wechatQrScanned.value = false
+  stopQrPolling('qr')
   clearTimeout(wechatQrTimer)
-  // Simulate QR code expiration after 120 seconds
-  wechatQrTimer = setTimeout(() => {
-    if (!wechatQrScanned.value) {
-      wechatQrExpired.value = true
-      ElMessage.warning('二维码已过期，请刷新')
-    }
-  }, 120000)
+
+  try {
+    const res = await generateWechatQr()
+    wechatQrTicket = res.data.ticket
+    const expireSeconds = res.data.expireSeconds || 120
+
+    // Set expiration timer
+    wechatQrTimer = setTimeout(() => {
+      if (!wechatQrScanned.value) {
+        wechatQrExpired.value = true
+        stopQrPolling('qr')
+        ElMessage.warning('二维码已过期，请刷新')
+      }
+    }, expireSeconds * 1000)
+
+    // Start polling for scan status
+    startQrPolling('qr')
+  } catch (error) {
+    handleApiError(error)
+  }
 }
 
 // Refresh WeChat QR
 function refreshWechatQr() {
   initWechatQr()
-  ElMessage.success('二维码已刷新')
 }
 
-// Switch to WeChat MP tab
-function initWechatMp() {
+// Initialize WeChat MP QR code
+async function initWechatMp() {
   wechatMpExpired.value = false
   wechatMpScanned.value = false
+  stopQrPolling('mp')
   clearTimeout(wechatMpTimer)
-  // Simulate QR code expiration after 120 seconds
-  wechatMpTimer = setTimeout(() => {
-    if (!wechatMpScanned.value) {
-      wechatMpExpired.value = true
-      ElMessage.warning('二维码已过期，请刷新')
-    }
-  }, 120000)
+
+  try {
+    const res = await generateWechatMp()
+    wechatMpTicket = res.data.ticket
+    const expireSeconds = res.data.expireSeconds || 120
+
+    // Set expiration timer
+    wechatMpTimer = setTimeout(() => {
+      if (!wechatMpScanned.value) {
+        wechatMpExpired.value = true
+        stopQrPolling('mp')
+        ElMessage.warning('二维码已过期，请刷新')
+      }
+    }, expireSeconds * 1000)
+
+    // Start polling for scan status
+    startQrPolling('mp')
+  } catch (error) {
+    handleApiError(error)
+  }
 }
 
 // Refresh WeChat MP QR
 function refreshWechatMp() {
   initWechatMp()
-  ElMessage.success('二维码已刷新')
 }
 
 // Handle tab change
 function handleTabChange(tab) {
+  // Stop polling when switching away from QR tabs
+  if (activeTab.value === 'wechat-qr' && tab !== 'wechat-qr') {
+    stopQrPolling('qr')
+    clearTimeout(wechatQrTimer)
+  }
+  if (activeTab.value === 'wechat-mp' && tab !== 'wechat-mp') {
+    stopQrPolling('mp')
+    clearTimeout(wechatMpTimer)
+  }
+
   activeTab.value = tab
   if (tab === 'wechat-qr') {
     initWechatQr()
@@ -226,6 +389,7 @@ function handleTabChange(tab) {
 
 // Phone code button text
 const phoneCodeBtnText = computed(() => {
+  if (phoneCodeLoading.value) return '发送中...'
   return phoneCodeCountdown.value > 0
     ? `${phoneCodeCountdown.value}s 后重发`
     : '获取验证码'
@@ -233,6 +397,7 @@ const phoneCodeBtnText = computed(() => {
 
 // Email code button text
 const emailCodeBtnText = computed(() => {
+  if (emailCodeLoading.value) return '发送中...'
   return emailCodeCountdown.value > 0
     ? `${emailCodeCountdown.value}s 后重发`
     : '获取验证码'
@@ -244,6 +409,8 @@ onBeforeUnmount(() => {
   clearInterval(emailTimer)
   clearTimeout(wechatQrTimer)
   clearTimeout(wechatMpTimer)
+  stopQrPolling('qr')
+  stopQrPolling('mp')
 })
 </script>
 
@@ -333,6 +500,7 @@ onBeforeUnmount(() => {
                   type="primary"
                   plain
                   :disabled="!isValidPhone || phoneCodeCountdown > 0"
+                  :loading="phoneCodeLoading"
                   @click="sendPhoneCode"
                   class="code-btn"
                 >
@@ -345,6 +513,7 @@ onBeforeUnmount(() => {
                 type="primary"
                 class="login-btn"
                 :disabled="!isValidPhone || !phoneForm.code"
+                :loading="phoneLoginLoading"
                 @click="handlePhoneLogin"
               >
                 登 录
@@ -397,6 +566,7 @@ onBeforeUnmount(() => {
                   type="primary"
                   plain
                   :disabled="!isValidEmail || emailCodeCountdown > 0"
+                  :loading="emailCodeLoading"
                   @click="sendEmailCode"
                   class="code-btn"
                 >
@@ -409,6 +579,7 @@ onBeforeUnmount(() => {
                 type="primary"
                 class="login-btn"
                 :disabled="!isValidEmail || !emailForm.code"
+                :loading="emailLoginLoading"
                 @click="handleEmailLogin"
               >
                 登 录
