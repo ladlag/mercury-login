@@ -243,7 +243,7 @@ onBeforeUnmount(() => {
         <h2 class="login-title">欢迎登录</h2>
         <p class="login-desc">请选择以下方式登录您的账号</p>
 
-        <!-- Login method tabs -->
+        <!-- Primary login method tabs (phone + wechat-mp) -->
         <div class="login-tabs">
           <div
             class="tab-item"
@@ -251,23 +251,7 @@ onBeforeUnmount(() => {
             @click="handleTabChange('phone')"
           >
             <el-icon><Iphone /></el-icon>
-            <span>手机登录</span>
-          </div>
-          <div
-            class="tab-item"
-            :class="{ active: activeTab === 'email' }"
-            @click="handleTabChange('email')"
-          >
-            <el-icon><Message /></el-icon>
-            <span>邮箱登录</span>
-          </div>
-          <div
-            class="tab-item"
-            :class="{ active: activeTab === 'wechat-qr' }"
-            @click="handleTabChange('wechat-qr')"
-          >
-            <el-icon><ChatDotRound /></el-icon>
-            <span>微信扫码</span>
+            <span>手机验证码登录</span>
           </div>
           <div
             class="tab-item"
@@ -275,7 +259,7 @@ onBeforeUnmount(() => {
             @click="handleTabChange('wechat-mp')"
           >
             <el-icon><Promotion /></el-icon>
-            <span>公众号登录</span>
+            <span>微信公众号登录</span>
           </div>
         </div>
 
@@ -325,6 +309,21 @@ onBeforeUnmount(() => {
               </el-button>
             </el-form-item>
           </el-form>
+
+          <!-- Secondary login methods -->
+          <div class="alt-login">
+            <span class="alt-login-label">其他登录方式</span>
+            <div class="alt-login-links">
+              <a class="alt-link" role="button" tabindex="0" @click="handleTabChange('email')" @keyup.enter="handleTabChange('email')">
+                <el-icon><Message /></el-icon>
+                <span>邮箱验证码登录</span>
+              </a>
+              <a class="alt-link" role="button" tabindex="0" @click="handleTabChange('wechat-qr')" @keyup.enter="handleTabChange('wechat-qr')">
+                <el-icon><ChatDotRound /></el-icon>
+                <span>微信扫码登录</span>
+              </a>
+            </div>
+          </div>
         </div>
 
         <!-- Email login form -->
@@ -372,6 +371,21 @@ onBeforeUnmount(() => {
               </el-button>
             </el-form-item>
           </el-form>
+
+          <!-- Back to primary methods -->
+          <div class="alt-login">
+            <span class="alt-login-label">其他登录方式</span>
+            <div class="alt-login-links">
+              <a class="alt-link" role="button" tabindex="0" @click="handleTabChange('phone')" @keyup.enter="handleTabChange('phone')">
+                <el-icon><Iphone /></el-icon>
+                <span>手机验证码登录</span>
+              </a>
+              <a class="alt-link" role="button" tabindex="0" @click="handleTabChange('wechat-qr')" @keyup.enter="handleTabChange('wechat-qr')">
+                <el-icon><ChatDotRound /></el-icon>
+                <span>微信扫码登录</span>
+              </a>
+            </div>
+          </div>
         </div>
 
         <!-- WeChat QR code login -->
@@ -470,6 +484,21 @@ onBeforeUnmount(() => {
               <p class="scan-sub">请在微信中确认登录</p>
             </div>
           </div>
+
+          <!-- Back to primary methods -->
+          <div class="alt-login">
+            <span class="alt-login-label">其他登录方式</span>
+            <div class="alt-login-links">
+              <a class="alt-link" role="button" tabindex="0" @click="handleTabChange('phone')" @keyup.enter="handleTabChange('phone')">
+                <el-icon><Iphone /></el-icon>
+                <span>手机验证码登录</span>
+              </a>
+              <a class="alt-link" role="button" tabindex="0" @click="handleTabChange('email')" @keyup.enter="handleTabChange('email')">
+                <el-icon><Message /></el-icon>
+                <span>邮箱验证码登录</span>
+              </a>
+            </div>
+          </div>
         </div>
 
         <!-- WeChat MP (public account) login -->
@@ -561,6 +590,21 @@ onBeforeUnmount(() => {
               <el-icon class="scanned-icon"><Promotion /></el-icon>
               <p>扫描成功</p>
               <p class="scan-sub">请在微信中关注公众号完成登录</p>
+            </div>
+          </div>
+
+          <!-- Secondary login methods -->
+          <div class="alt-login">
+            <span class="alt-login-label">其他登录方式</span>
+            <div class="alt-login-links">
+              <a class="alt-link" role="button" tabindex="0" @click="handleTabChange('email')" @keyup.enter="handleTabChange('email')">
+                <el-icon><Message /></el-icon>
+                <span>邮箱验证码登录</span>
+              </a>
+              <a class="alt-link" role="button" tabindex="0" @click="handleTabChange('wechat-qr')" @keyup.enter="handleTabChange('wechat-qr')">
+                <el-icon><ChatDotRound /></el-icon>
+                <span>微信扫码登录</span>
+              </a>
             </div>
           </div>
         </div>
@@ -672,16 +716,16 @@ onBeforeUnmount(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 40px;
+  padding: 24px 40px;
   min-height: 100vh;
 }
 
 .login-card {
   width: 100%;
-  max-width: 440px;
+  max-width: 520px;
   background: #fff;
   border-radius: 16px;
-  padding: 48px 40px 36px;
+  padding: 48px 44px 36px;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
 }
 
@@ -713,14 +757,15 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: 10px 8px;
-  font-size: 13px;
+  gap: 6px;
+  padding: 12px 16px;
+  font-size: 14px;
   color: #666;
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.3s ease;
   user-select: none;
+  white-space: nowrap;
 }
 
 .tab-item:hover {
@@ -799,12 +844,12 @@ onBeforeUnmount(() => {
 
 .qr-wrapper {
   position: relative;
-  width: 200px;
-  height: 200px;
+  width: 220px;
+  height: 220px;
   border: 1px solid #ebeef5;
   border-radius: 12px;
   overflow: hidden;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 
 .qr-placeholder {
@@ -856,6 +901,69 @@ onBeforeUnmount(() => {
   color: #999 !important;
 }
 
+/* Alternative login methods */
+.alt-login {
+  margin-top: 8px;
+  text-align: center;
+}
+
+.alt-login-label {
+  display: block;
+  font-size: 12px;
+  color: #c0c4cc;
+  margin-bottom: 12px;
+  position: relative;
+}
+
+.alt-login-label::before,
+.alt-login-label::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 60px;
+  height: 1px;
+  background: #e4e7ed;
+}
+
+.alt-login-label::before {
+  left: 20%;
+}
+
+.alt-login-label::after {
+  right: 20%;
+}
+
+.alt-login-links {
+  display: flex;
+  justify-content: center;
+  gap: 32px;
+}
+
+.alt-link {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: #909399;
+  cursor: pointer;
+  transition: color 0.2s;
+  text-decoration: none;
+}
+
+.alt-link:hover {
+  color: #667eea;
+}
+
+.alt-link:focus {
+  outline: 2px solid #667eea;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.alt-link .el-icon {
+  font-size: 16px;
+}
+
 /* Agreement */
 .login-agreement {
   text-align: center;
@@ -897,20 +1005,25 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 480px) {
-  .login-tabs {
-    flex-wrap: wrap;
-  }
-
-  .tab-item {
-    flex: 0 0 calc(50% - 2px);
-  }
-
   .code-input-group {
     flex-direction: column;
   }
 
   .code-btn {
     width: 100%;
+  }
+
+  .alt-login-label::before,
+  .alt-login-label::after {
+    width: 40px;
+  }
+
+  .alt-login-label::before {
+    left: 10%;
+  }
+
+  .alt-login-label::after {
+    right: 10%;
   }
 }
 
