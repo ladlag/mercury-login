@@ -61,7 +61,8 @@ export async function request(url, options = {}) {
     }
 
     // Handle business-level error codes in response body
-    if (result.code && String(result.code) !== '200') {
+    const SUCCESS_CODE = '200'
+    if (result.code && String(result.code) !== SUCCESS_CODE) {
       throw new ApiError(
         result.message || '操作失败',
         response.status,

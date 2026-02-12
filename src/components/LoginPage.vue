@@ -281,7 +281,7 @@ function startQrPolling(type) {
     }
     try {
       const res = await pollFn(ticket)
-      const status = res.data && res.data.status
+      const status = res.data?.status
       if (status === 'scanned') {
         scannedRef.value = true
       } else if (status === 'confirmed') {
@@ -289,8 +289,11 @@ function startQrPolling(type) {
         ElMessage.success(res.message || '登录成功')
         handleLoginSuccess(res.data)
       }
-    } catch {
-      // Silently ignore poll errors; will retry on next interval
+    } catch (err) {
+      // Log poll errors in development for debugging; retry on next interval
+      if (import.meta.env.DEV) {
+        console.warn('[QR Poll] Error:', err.message || err)
+      }
     }
   }, QR_POLL_INTERVAL)
 
