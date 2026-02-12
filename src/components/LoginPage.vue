@@ -19,6 +19,7 @@ const phoneForm = reactive({
 })
 const phoneCodeCountdown = ref(0)
 let phoneTimer = null
+const phoneTouched = reactive({ phone: false, code: false })
 
 // Email login form
 const emailForm = reactive({
@@ -27,6 +28,7 @@ const emailForm = reactive({
 })
 const emailCodeCountdown = ref(0)
 let emailTimer = null
+const emailTouched = reactive({ email: false, code: false })
 
 // WeChat QR login
 const wechatQrExpired = ref(false)
@@ -49,13 +51,46 @@ const isValidPhone = computed(() => {
   return /^1[3-9]\d{9}$/.test(phoneForm.phone)
 })
 
+// Phone error message
+const phoneError = computed(() => {
+  if (!phoneTouched.phone || !phoneForm.phone) return ''
+  if (!/^\d*$/.test(phoneForm.phone)) return '手机号码只能包含数字'
+  if (phoneForm.phone.length < 11) return '请输入11位手机号码'
+  if (!isValidPhone.value) return '手机号码格式不正确'
+  return ''
+})
+
+// Phone code error message
+const phoneCodeError = computed(() => {
+  if (!phoneTouched.code || !phoneForm.code) return ''
+  if (!/^\d*$/.test(phoneForm.code)) return '验证码只能包含数字'
+  if (phoneForm.code.length < 4) return '请输入4-6位验证码'
+  return ''
+})
+
 // Email validation
 const isValidEmail = computed(() => {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailForm.email)
 })
 
+// Email error message
+const emailError = computed(() => {
+  if (!emailTouched.email || !emailForm.email) return ''
+  if (!isValidEmail.value) return '请输入正确的邮箱地址'
+  return ''
+})
+
+// Email code error message
+const emailCodeError = computed(() => {
+  if (!emailTouched.code || !emailForm.code) return ''
+  if (!/^\d*$/.test(emailForm.code)) return '验证码只能包含数字'
+  if (emailForm.code.length < 4) return '请输入4-6位验证码'
+  return ''
+})
+
 // Send phone verification code
 function sendPhoneCode() {
+  phoneTouched.phone = true
   if (!isValidPhone.value) {
     ElMessage.warning('请输入正确的手机号码')
     return
@@ -76,6 +111,7 @@ function sendPhoneCode() {
 
 // Send email verification code
 function sendEmailCode() {
+  emailTouched.email = true
   if (!isValidEmail.value) {
     ElMessage.warning('请输入正确的邮箱地址')
     return
@@ -96,6 +132,8 @@ function sendEmailCode() {
 
 // Phone login submit
 function handlePhoneLogin() {
+  phoneTouched.phone = true
+  phoneTouched.code = true
   if (!isValidPhone.value) {
     ElMessage.warning('请输入正确的手机号码')
     return
@@ -111,6 +149,8 @@ function handlePhoneLogin() {
 
 // Email login submit
 function handleEmailLogin() {
+  emailTouched.email = true
+  emailTouched.code = true
   if (!isValidEmail.value) {
     ElMessage.warning('请输入正确的邮箱地址')
     return
@@ -266,25 +306,27 @@ onBeforeUnmount(() => {
         <!-- Phone login form -->
         <div v-if="activeTab === 'phone'" class="login-form">
           <el-form :model="phoneForm" size="large">
-            <el-form-item>
+            <el-form-item :error="phoneError">
               <el-input
                 v-model="phoneForm.phone"
                 placeholder="请输入手机号码"
                 maxlength="11"
                 clearable
+                @blur="phoneTouched.phone = true"
               >
                 <template #prefix>
                   <span class="input-prefix">+86</span>
                 </template>
               </el-input>
             </el-form-item>
-            <el-form-item>
+            <el-form-item :error="phoneCodeError">
               <div class="code-input-group">
                 <el-input
                   v-model="phoneForm.code"
                   placeholder="请输入验证码"
                   maxlength="6"
                   clearable
+                  @blur="phoneTouched.code = true"
                   @keyup.enter="handlePhoneLogin"
                 />
                 <el-button
@@ -329,24 +371,26 @@ onBeforeUnmount(() => {
         <!-- Email login form -->
         <div v-if="activeTab === 'email'" class="login-form">
           <el-form :model="emailForm" size="large">
-            <el-form-item>
+            <el-form-item :error="emailError">
               <el-input
                 v-model="emailForm.email"
                 placeholder="请输入邮箱地址"
                 clearable
+                @blur="emailTouched.email = true"
               >
                 <template #prefix>
                   <el-icon><Message /></el-icon>
                 </template>
               </el-input>
             </el-form-item>
-            <el-form-item>
+            <el-form-item :error="emailCodeError">
               <div class="code-input-group">
                 <el-input
                   v-model="emailForm.code"
                   placeholder="请输入验证码"
                   maxlength="6"
                   clearable
+                  @blur="emailTouched.code = true"
                   @keyup.enter="handleEmailLogin"
                 />
                 <el-button
@@ -618,6 +662,19 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
+      <!-- Ad placement area (reserved for future use) -->
+      <div class="ad-slot">
+        <!-- 
+          广告位预留区域
+          建议尺寸：宽度跟随登录卡片，高度 60-90px
+          适合展示：横幅广告、合作伙伴 Logo、活动推广等
+          示例：<img src="ad-banner.png" alt="广告" class="ad-banner" />
+        -->
+        <div class="ad-placeholder">
+          <span>— 合作伙伴 —</span>
+        </div>
+      </div>
+
       <!-- Footer -->
       <div class="login-footer">
         <span>© {{ new Date().getFullYear() }} Mercury · 统一登录平台</span>
@@ -631,13 +688,13 @@ onBeforeUnmount(() => {
   display: flex;
   width: 100%;
   height: 100vh;
-  background: #f5f7fa;
+  background: #eef1f6;
 }
 
 /* Left banner */
 .login-banner {
-  flex: 0 0 420px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  flex: 0 0 380px;
+  background: linear-gradient(135deg, #4c63d2 0%, #6b3fa0 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -726,19 +783,19 @@ onBeforeUnmount(() => {
   background: #fff;
   border-radius: 16px;
   padding: 48px 44px 36px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 6px 30px rgba(0, 0, 0, 0.1);
 }
 
 .login-title {
   font-size: 28px;
   font-weight: 600;
-  color: #1a1a2e;
+  color: #111827;
   margin-bottom: 8px;
 }
 
 .login-desc {
   font-size: 14px;
-  color: #8e8ea0;
+  color: #6b7280;
   margin-bottom: 32px;
 }
 
@@ -747,7 +804,7 @@ onBeforeUnmount(() => {
   display: flex;
   gap: 4px;
   margin-bottom: 32px;
-  background: #f5f7fa;
+  background: #e8ecf1;
   border-radius: 10px;
   padding: 4px;
 }
@@ -760,7 +817,7 @@ onBeforeUnmount(() => {
   gap: 6px;
   padding: 12px 16px;
   font-size: 14px;
-  color: #666;
+  color: #4b5563;
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -769,14 +826,14 @@ onBeforeUnmount(() => {
 }
 
 .tab-item:hover {
-  color: #667eea;
+  color: #4c63d2;
 }
 
 .tab-item.active {
   background: #fff;
-  color: #667eea;
+  color: #4c63d2;
   font-weight: 500;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
 .tab-item .el-icon {
@@ -810,22 +867,22 @@ onBeforeUnmount(() => {
   font-size: 16px;
   font-weight: 500;
   border-radius: 10px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #4c63d2 0%, #6b3fa0 100%);
   border: none;
   letter-spacing: 4px;
 }
 
 .login-btn:hover,
 .login-btn:focus {
-  background: linear-gradient(135deg, #5a72d8 0%, #6a4294 100%);
+  background: linear-gradient(135deg, #3f54c0 0%, #5e3590 100%);
 }
 
 .input-prefix {
-  color: #333;
+  color: #1f2937;
   font-size: 14px;
   font-weight: 500;
   padding-right: 8px;
-  border-right: 1px solid #dcdfe6;
+  border-right: 1px solid #d1d5db;
   margin-right: 4px;
 }
 
@@ -838,7 +895,7 @@ onBeforeUnmount(() => {
 
 .qr-tip {
   font-size: 14px;
-  color: #666;
+  color: #4b5563;
   margin-bottom: 24px;
 }
 
@@ -944,18 +1001,18 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 4px;
   font-size: 13px;
-  color: #909399;
+  color: #6b7280;
   cursor: pointer;
   transition: color 0.2s;
   text-decoration: none;
 }
 
 .alt-link:hover {
-  color: #667eea;
+  color: #4c63d2;
 }
 
 .alt-link:focus {
-  outline: 2px solid #667eea;
+  outline: 2px solid #4c63d2;
   outline-offset: 2px;
   border-radius: 4px;
 }
@@ -974,7 +1031,7 @@ onBeforeUnmount(() => {
 }
 
 .login-agreement a {
-  color: #667eea;
+  color: #4c63d2;
   text-decoration: none;
 }
 
@@ -984,12 +1041,59 @@ onBeforeUnmount(() => {
 
 /* Footer */
 .login-footer {
-  margin-top: 40px;
+  margin-top: 20px;
   font-size: 12px;
-  color: #c0c4cc;
+  color: #9ca3af;
 }
 
-/* Responsive */
+/* Ad placement slot */
+.ad-slot {
+  width: 100%;
+  max-width: 520px;
+  margin-top: 20px;
+}
+
+.ad-placeholder {
+  text-align: center;
+  padding: 16px;
+  color: #c0c4cc;
+  font-size: 12px;
+  border-top: 1px solid #e5e7eb;
+}
+
+/* Responsive - Tablet (iPad) */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .login-banner {
+    flex: 0 0 280px;
+  }
+
+  .banner-content {
+    padding: 24px;
+  }
+
+  .brand-title {
+    font-size: 28px;
+  }
+
+  .brand-subtitle {
+    font-size: 14px;
+    margin-bottom: 32px;
+  }
+
+  .feature-item {
+    font-size: 13px;
+  }
+
+  .login-panel {
+    padding: 20px 32px;
+  }
+
+  .login-card {
+    max-width: 460px;
+  }
+}
+
+/* Responsive - Mobile */
 @media (max-width: 900px) {
   .login-banner {
     display: none;
@@ -1038,9 +1142,9 @@ onBeforeUnmount(() => {
 }
 
 :deep(.el-button--primary.is-plain) {
-  --el-button-hover-bg-color: #667eea;
-  --el-button-hover-border-color: #667eea;
-  color: #667eea;
-  border-color: #667eea;
+  --el-button-hover-bg-color: #4c63d2;
+  --el-button-hover-border-color: #4c63d2;
+  color: #4c63d2;
+  border-color: #4c63d2;
 }
 </style>
