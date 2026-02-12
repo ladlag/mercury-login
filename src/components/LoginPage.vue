@@ -1138,7 +1138,7 @@ onBeforeUnmount(() => {
   display: flex;
   gap: 12px;
   width: 100%;
-  align-items: center;
+  align-items: stretch;
 }
 
 .captcha-input-group .el-input {
@@ -1147,16 +1147,16 @@ onBeforeUnmount(() => {
 
 .captcha-image-wrapper {
   flex-shrink: 0;
-  width: 130px;
-  height: 40px;
+  width: 120px;
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: 10px;
   overflow: hidden;
   border: 1px solid #dcdfe6;
   display: flex;
   align-items: center;
   justify-content: center;
   background: #f5f7fa;
+  transition: border-color 0.2s;
 }
 
 .captcha-image-wrapper:hover {
