@@ -5,6 +5,9 @@ import { API_BASE_URL, REQUEST_TIMEOUT } from './config.js'
  * Handles request/response interceptors, error normalization, and security headers.
  */
 
+/** Business-level success code returned by the backend */
+const SUCCESS_CODE = '200'
+
 /**
  * Make an HTTP request to the backend API.
  *
@@ -61,7 +64,6 @@ export async function request(url, options = {}) {
     }
 
     // Handle business-level error codes in response body
-    const SUCCESS_CODE = '200'
     if (result.code && String(result.code) !== SUCCESS_CODE) {
       throw new ApiError(
         result.message || '操作失败',

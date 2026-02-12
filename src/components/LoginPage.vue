@@ -301,12 +301,22 @@ async function handleEmailLogin() {
 function handleLoginSuccess(data) {
   const { token, tenantId } = data
   if (redirectUrl.value) {
-    const url = new URL(redirectUrl.value)
-    url.searchParams.set('token', token)
-    if (tenantId) {
-      url.searchParams.set('tenantId', tenantId)
+    try {
+      const url = new URL(redirectUrl.value)
+      url.searchParams.set('token', token)
+      if (tenantId) {
+        url.searchParams.set('tenantId', tenantId)
+      }
+      window.location.href = url.toString()
+    } catch {
+      // Fallback for relative or malformed URLs
+      const separator = redirectUrl.value.includes('?') ? '&' : '?'
+      let params = 'token=' + encodeURIComponent(token)
+      if (tenantId) {
+        params += '&tenantId=' + encodeURIComponent(tenantId)
+      }
+      window.location.href = redirectUrl.value + separator + params
     }
-    window.location.href = url.toString()
   } else {
     ElMessage.info('登录成功，Token: ' + token)
   }
