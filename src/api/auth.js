@@ -55,6 +55,14 @@
  *               "data": { "status": "pending|scanned|confirmed",
  *                         "token": "...", "tenantId": "...", ... } }
  *
+ * GET  /banners              - Get login page banner list
+ *   Response: { "code": "200", "message": "获取成功",
+ *               "data": { "banners": [ { "id": "...", "type": "brand|ad",
+ *                         "title": "...", "subtitle": "...",
+ *                         "features": ["..."], "background": "...",
+ *                         "imageUrl": "...", "link": "..." } ],
+ *                         "rotateInterval": 5000 } }
+ *
  * Business Error Handling:
  * ------------------------
  * When users trigger rate limiting, blacklist, or other restrictions:
@@ -75,6 +83,7 @@ import {
   mockWechatMpGenerate,
   mockWechatMpPoll,
   mockGetCaptcha,
+  mockGetBanners,
 } from './mock.js'
 
 /**
@@ -168,4 +177,15 @@ export function generateWechatMp() {
 export function pollWechatMp(ticket) {
   if (USE_MOCK) return mockWechatMpPoll(ticket)
   return get(`/wechat/mp/poll/${encodeURIComponent(ticket)}`)
+}
+
+// ---- Banner APIs ----
+
+/**
+ * Get banner list for login page.
+ * Response data: { banners: [...], rotateInterval: 5000 }
+ */
+export function getBanners() {
+  if (USE_MOCK) return mockGetBanners()
+  return get('/banners')
 }
