@@ -327,3 +327,51 @@ export async function mockWechatMpPoll(_ticket) {
     data: { status: 'pending' },
   }
 }
+
+// ---- Banner APIs ----
+
+export async function mockGetBanners() {
+  await delay(200)
+  return {
+    code: '200',
+    message: '获取成功',
+    data: {
+      banners: [
+        {
+          id: 'brand',
+          type: 'brand',
+          title: 'Mercury',
+          subtitle: '统一身份认证平台',
+          features: [
+            '安全可靠的登录认证',
+            '多种登录方式自由选择',
+            '一次登录，多端通行',
+          ],
+          background: 'linear-gradient(135deg, #7c8cf5 0%, #a78bfa 100%)',
+        },
+        {
+          id: 'security',
+          type: 'brand',
+          title: '安全保障',
+          subtitle: '企业级安全防护体系',
+          features: [
+            '全链路数据加密传输',
+            '多因素身份认证支持',
+            '实时风险监控与防护',
+          ],
+          background: 'linear-gradient(135deg, #36d1dc 0%, #5b86e5 100%)',
+        },
+        {
+          id: 'ad-demo',
+          type: 'ad',
+          title: '新功能上线',
+          subtitle: '支持企业微信一键登录',
+          imageUrl: '',
+          link: '',
+          background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+        },
+      ],
+      rotateInterval: 5000,
+    },
+  }
+}

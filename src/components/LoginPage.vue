@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, computed, onBeforeUnmount } from 'vue'
+import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
   Iphone,
@@ -18,6 +18,7 @@ import {
   generateWechatMp,
   pollWechatMp,
   getCaptcha,
+  getBanners,
 } from '../api/auth.js'
 import { QR_POLL_INTERVAL } from '../api/config.js'
 
@@ -68,6 +69,73 @@ const wechatMpScanned = ref(false)
 let wechatMpTimer = null
 let wechatMpPollTimer = null
 let wechatMpTicket = null
+
+// Banner state
+const bannerList = ref([
+  {
+    id: 'default',
+    type: 'brand',
+    title: 'Mercury',
+    subtitle: '统一身份认证平台',
+    features: [
+      '安全可靠的登录认证',
+      '多种登录方式自由选择',
+      '一次登录，多端通行',
+    ],
+    background: 'linear-gradient(135deg, #7c8cf5 0%, #a78bfa 100%)',
+  },
+])
+const activeBannerIndex = ref(0)
+let bannerRotateTimer = null
+let bannerRotateInterval = 5000
+
+const activeBanner = computed(() => bannerList.value[activeBannerIndex.value] || bannerList.value[0])
+
+async function loadBanners() {
+  try {
+    const res = await getBanners()
+    if (res.data && res.data.banners && res.data.banners.length > 0) {
+      bannerList.value = res.data.banners
+      if (res.data.rotateInterval) {
+        bannerRotateInterval = res.data.rotateInterval
+      }
+      activeBannerIndex.value = 0
+      startBannerRotation()
+    }
+  } catch {
+    // Use default banner on error
+  }
+}
+
+function startBannerRotation() {
+  stopBannerRotation()
+  if (bannerList.value.length <= 1) return
+  bannerRotateTimer = setInterval(() => {
+    activeBannerIndex.value = (activeBannerIndex.value + 1) % bannerList.value.length
+  }, bannerRotateInterval)
+}
+
+function stopBannerRotation() {
+  if (bannerRotateTimer) {
+    clearInterval(bannerRotateTimer)
+    bannerRotateTimer = null
+  }
+}
+
+function switchBanner(index) {
+  activeBannerIndex.value = index
+  startBannerRotation()
+}
+
+function handleBannerClick(banner) {
+  if (banner.link) {
+    window.open(banner.link, '_blank', 'noopener,noreferrer')
+  }
+}
+
+onMounted(() => {
+  loadBanners()
+})
 
 // Get redirect URL from query params
 const redirectUrl = computed(() => {
@@ -481,6 +549,7 @@ onBeforeUnmount(() => {
   clearTimeout(wechatMpTimer)
   stopQrPolling('qr')
   stopQrPolling('mp')
+  stopBannerRotation()
 })
 </script>
 
@@ -488,7 +557,12 @@ onBeforeUnmount(() => {
   <div class="login-container">
     <div class="login-wrapper">
       <!-- Left decorative banner (inside card) -->
-      <div class="login-banner">
+      <div
+        class="login-banner"
+        :style="{ background: activeBanner.background }"
+        :class="{ 'banner-clickable': !!activeBanner.link }"
+        @click="handleBannerClick(activeBanner)"
+      >
         <div class="banner-content">
           <div class="brand-icon">
             <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -496,22 +570,30 @@ onBeforeUnmount(() => {
               <path d="M20 32 L28 40 L44 24" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" />
             </svg>
           </div>
-          <h1 class="brand-title">Mercury</h1>
-          <p class="brand-subtitle">统一身份认证平台</p>
-          <div class="brand-features">
-            <div class="feature-item">
+          <h1 class="brand-title">{{ activeBanner.title }}</h1>
+          <p class="brand-subtitle">{{ activeBanner.subtitle }}</p>
+          <div v-if="activeBanner.features && activeBanner.features.length" class="brand-features">
+            <div v-for="(feature, idx) in activeBanner.features" :key="idx" class="feature-item">
               <span class="feature-dot"></span>
-              <span>安全可靠的登录认证</span>
-            </div>
-            <div class="feature-item">
-              <span class="feature-dot"></span>
-              <span>多种登录方式自由选择</span>
-            </div>
-            <div class="feature-item">
-              <span class="feature-dot"></span>
-              <span>一次登录，多端通行</span>
+              <span>{{ feature }}</span>
             </div>
           </div>
+          <img
+            v-if="activeBanner.imageUrl"
+            :src="activeBanner.imageUrl"
+            class="banner-image"
+            alt=""
+          />
+        </div>
+        <!-- Banner indicators (dots) -->
+        <div v-if="bannerList.length > 1" class="banner-indicators">
+          <span
+            v-for="(banner, idx) in bannerList"
+            :key="banner.id"
+            class="banner-dot"
+            :class="{ active: idx === activeBannerIndex }"
+            @click.stop="switchBanner(idx)"
+          ></span>
         </div>
       </div>
 
@@ -980,12 +1062,16 @@ onBeforeUnmount(() => {
 /* Left banner (inside wrapper, same height as card) */
 .login-banner {
   flex: 0 0 320px;
-  background: linear-gradient(135deg, #7c8cf5 0%, #a78bfa 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
   overflow: hidden;
+  transition: background 0.5s ease;
+}
+
+.login-banner.banner-clickable {
+  cursor: pointer;
 }
 
 .login-banner::before {
@@ -1005,6 +1091,38 @@ onBeforeUnmount(() => {
   text-align: center;
   color: #fff;
   padding: 40px 32px;
+}
+
+.banner-image {
+  max-width: 100%;
+  max-height: 120px;
+  margin-top: 20px;
+  border-radius: 8px;
+  object-fit: contain;
+}
+
+.banner-indicators {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  z-index: 2;
+}
+
+.banner-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  transition: background 0.3s, transform 0.3s;
+}
+
+.banner-dot.active {
+  background: #fff;
+  transform: scale(1.3);
 }
 
 .brand-icon {
