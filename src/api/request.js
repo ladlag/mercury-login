@@ -8,6 +8,32 @@ import { API_BASE_URL, REQUEST_TIMEOUT } from './config.js'
 /** Business-level success code returned by the backend */
 const SUCCESS_CODE = '200'
 
+/** Generate a unique request ID for traceability */
+function generateRequestId() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID()
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (crypto.getRandomValues(new Uint8Array(1))[0] & 15) >> (c === 'x' ? 0 : 0)
+    const v = c === 'x' ? r : (r & 0x3) | 0x8
+    return v.toString(16)
+  })
+}
+
+/**
+ * Get the tenant ID from the current page URL query parameters.
+ * When site A redirects to the login page, it carries tenantId in the URL:
+ *   http://IP:PORT/xxxx?tenantId=xxx&redirect=http://A.com/gateway
+ */
+function getTenantId() {
+  try {
+    const params = new URLSearchParams(window.location.search)
+    return params.get('tenantId') || ''
+  } catch {
+    return ''
+  }
+}
+
 /**
  * Make an HTTP request to the backend API.
  *
@@ -28,10 +54,22 @@ export async function request(url, options = {}) {
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT)
 
   try {
+    const defaultHeaders = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'X-Request-Id': generateRequestId(),
+      'X-Client-Type': 'web',
+    }
+
+    const tenantId = getTenantId()
+    if (tenantId) {
+      defaultHeaders['X-Tenant-Id'] = tenantId
+    }
+
     const fetchOptions = {
       method,
       headers: {
-        'Content-Type': 'application/json',
+        ...defaultHeaders,
         ...headers,
       },
       signal: controller.signal,
