@@ -138,63 +138,6 @@ function clearFailures(type, account) {
   loginFailures.delete(failureKey(type, account))
 }
 
-// ---- Password APIs ----
-
-/** Mock RSA key pair (for development only - NOT for production use) */
-const MOCK_PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
-MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC7JHoJfg6yNzLMOWet8Z/G
-mock+key+for+development+only
------END PUBLIC KEY-----`
-
-export async function mockGetPublicKey() {
-  await delay(200)
-  return {
-    code: '200',
-    message: '获取成功',
-    data: {
-      publicKey: MOCK_PUBLIC_KEY,
-    },
-  }
-}
-
-/** Mock accounts for password login (username -> password) */
-const mockAccounts = new Map([
-  ['admin', 'admin123'],
-  ['user', 'user123'],
-])
-
-export async function mockPasswordLogin(username, password, captchaId, captchaCode) {
-  await delay(800)
-  // In mock mode, accept the raw password (real backend would decrypt RSA-encrypted password)
-  const storedPassword = mockAccounts.get(username)
-  if (!storedPassword || storedPassword !== password) {
-    return buildLoginFailure('password', username, '用户名或密码错误', captchaId, captchaCode)
-  }
-
-  // If captcha is required, validate it
-  const key = failureKey('password', username)
-  const failures = loginFailures.get(key) || 0
-  if (failures >= CAPTCHA_THRESHOLD) {
-    if (!captchaId || !captchaCode) {
-      return {
-        code: '400002',
-        message: '请输入图形验证码',
-        data: { captchaRequired: true },
-      }
-    }
-    if (!validateMockCaptcha(captchaId, captchaCode)) {
-      return {
-        code: '400002',
-        message: '图形验证码错误',
-        data: { captchaRequired: true },
-      }
-    }
-  }
-
-  clearFailures('password', username)
-  return mockLoginSuccess()
-}
-
 // ---- SMS APIs ----
 
 export async function mockSendSmsCode(phone) {

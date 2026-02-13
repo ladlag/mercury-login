@@ -11,18 +11,6 @@
  *   Response: { "code": "200", "message": "验证码获取成功",
  *               "data": { "captchaId": "...", "captchaImage": "data:image/..." } }
  *
- * GET  /public-key           - Get RSA public key for password encryption
- *   Response: { "code": "200", "message": "获取成功",
- *               "data": { "publicKey": "-----BEGIN PUBLIC KEY-----\n..." } }
- *
- * POST /password/login       - Login with username + RSA-encrypted password (+ optional captcha)
- *   Request:  { "username": "admin", "password": "<RSA-encrypted>",
- *               "captchaId": "...", "captchaCode": "..." }
- *   Response (success): { "code": "200", "message": "登录成功",
- *               "data": { "token": "...", "tenantId": "...", "userId": "...", "username": "..." } }
- *   Response (fail, captcha needed): { "code": "400001", "message": "用户名或密码错误",
- *               "data": { "captchaRequired": true } }
- *
  * POST /sms/send           - Send SMS verification code
  *   Request:  { "phone": "13800138000" }
  *   Response: { "code": "200", "message": "验证码已发送", "data": null }
@@ -87,8 +75,6 @@ import {
   mockWechatMpGenerate,
   mockWechatMpPoll,
   mockGetCaptcha,
-  mockGetPublicKey,
-  mockPasswordLogin,
 } from './mock.js'
 
 /**
@@ -116,28 +102,6 @@ function checkMockResponse(result) {
 export function getCaptcha() {
   if (USE_MOCK) return mockGetCaptcha()
   return get('/captcha')
-}
-
-// ---- Password APIs ----
-
-/**
- * Get RSA public key for password encryption.
- * Response data: { publicKey: "-----BEGIN PUBLIC KEY-----\n..." }
- */
-export function getPublicKey() {
-  if (USE_MOCK) return mockGetPublicKey()
-  return get('/public-key')
-}
-
-/** Login with username + RSA-encrypted password (+ optional captcha) */
-export async function passwordLogin(username, encryptedPassword, captchaId, captchaCode) {
-  if (USE_MOCK) return checkMockResponse(await mockPasswordLogin(username, encryptedPassword, captchaId, captchaCode))
-  const body = { username, password: encryptedPassword }
-  if (captchaId) {
-    body.captchaId = captchaId
-    body.captchaCode = captchaCode
-  }
-  return post('/password/login', body)
 }
 
 // ---- SMS APIs ----

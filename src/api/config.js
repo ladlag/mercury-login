@@ -4,14 +4,12 @@
  * Development Guide:
  * -----------------
  * 1. Set VITE_API_BASE_URL in .env files or environment variables to your backend URL.
- *    Example: VITE_API_BASE_URL=http://192.168.1.100:8080/auth-api
+ *    Example: VITE_API_BASE_URL=http://192.168.1.100:8080/api/auth
  *
  * 2. Set VITE_API_MOCK=true to use mock data during development (default: true).
  *    Set VITE_API_MOCK=false to call real backend APIs.
  *
  * 3. All API endpoints are relative to the base URL. For example:
- *    GET  {baseURL}/public-key  -> Get RSA public key for password encryption
- *    POST {baseURL}/password/login -> Password login (encrypted)
  *    POST {baseURL}/sms/send    -> Send phone verification code
  *    POST {baseURL}/sms/login   -> Phone login
  *    POST {baseURL}/email/send  -> Send email verification code
@@ -29,8 +27,8 @@
  *    { "token": "jwt-token", "tenantId": "tenant-001", "userId": "user-001", ... }
  */
 
-// Base URL for all API requests
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/auth-api'
+// Base URL for all API requests (matches backend @RequestMapping("/api/auth"))
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/auth'
 
 // Whether to use mock data (for development without backend)
 export const USE_MOCK = import.meta.env.VITE_API_MOCK !== 'false'
