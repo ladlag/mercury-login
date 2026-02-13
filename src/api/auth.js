@@ -105,22 +105,32 @@ function checkMockResponse(result) {
 
 /** Cached public key info: { publicKey, encrypt } */
 let cachedKeyInfo = null
+let keyInfoPromise = null
 
 /**
  * Fetch public key from backend and cache it.
  * Response data: { publicKey: "...", encrypt: true/false }
  * The `encrypt` flag indicates whether the backend requires sensitive data encryption.
+ * Uses promise-based locking to avoid duplicate concurrent fetches.
  */
 async function fetchKeyInfo() {
   if (cachedKeyInfo) return cachedKeyInfo
-  try {
-    const res = await getPublicKey()
-    cachedKeyInfo = res.data
-  } catch {
-    // If public key fetch fails, default to no encryption
-    cachedKeyInfo = { publicKey: null, encrypt: false }
-  }
-  return cachedKeyInfo
+  if (keyInfoPromise) return keyInfoPromise
+  keyInfoPromise = (async () => {
+    try {
+      const res = await getPublicKey()
+      cachedKeyInfo = res.data
+    } catch (err) {
+      if (import.meta.env.DEV) {
+        console.warn('[Auth] Failed to fetch public key, encryption disabled:', err.message || err)
+      }
+      cachedKeyInfo = { publicKey: null, encrypt: false }
+    } finally {
+      keyInfoPromise = null
+    }
+    return cachedKeyInfo
+  })()
+  return keyInfoPromise
 }
 
 /**
