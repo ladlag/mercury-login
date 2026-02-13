@@ -138,6 +138,19 @@ function clearFailures(type, account) {
   loginFailures.delete(failureKey(type, account))
 }
 
+// ---- Public Key APIs ----
+
+export async function mockGetPublicKey() {
+  await delay(200)
+  return {
+    code: '200',
+    message: '获取成功',
+    data: {
+      publicKey: '-----BEGIN PUBLIC KEY-----\nMIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDMOCK...(mock-key)\n-----END PUBLIC KEY-----',
+    },
+  }
+}
+
 // ---- SMS APIs ----
 
 export async function mockSendSmsCode(phone) {

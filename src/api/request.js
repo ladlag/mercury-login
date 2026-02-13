@@ -8,6 +8,15 @@ import { API_BASE_URL, REQUEST_TIMEOUT } from './config.js'
 /** Business-level success code returned by the backend */
 const SUCCESS_CODE = '200'
 
+/** Generate a unique request ID for traceability */
+function generateRequestId() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0
+    const v = c === 'x' ? r : (r & 0x3) | 0x8
+    return v.toString(16)
+  })
+}
+
 /**
  * Make an HTTP request to the backend API.
  *
@@ -32,6 +41,9 @@ export async function request(url, options = {}) {
       method,
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-Request-Id': generateRequestId(),
+        'X-Client-Type': 'web',
         ...headers,
       },
       signal: controller.signal,

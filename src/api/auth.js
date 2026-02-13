@@ -11,6 +11,10 @@
  *   Response: { "code": "200", "message": "验证码获取成功",
  *               "data": { "captchaId": "...", "captchaImage": "data:image/..." } }
  *
+ * GET  /public-key           - Get RSA public key for encrypting sensitive data
+ *   Response: { "code": "200", "message": "获取成功",
+ *               "data": { "publicKey": "-----BEGIN PUBLIC KEY-----\n..." } }
+ *
  * POST /sms/send           - Send SMS verification code
  *   Request:  { "phone": "13800138000" }
  *   Response: { "code": "200", "message": "验证码已发送", "data": null }
@@ -75,6 +79,7 @@ import {
   mockWechatMpGenerate,
   mockWechatMpPoll,
   mockGetCaptcha,
+  mockGetPublicKey,
 } from './mock.js'
 
 /**
@@ -102,6 +107,17 @@ function checkMockResponse(result) {
 export function getCaptcha() {
   if (USE_MOCK) return mockGetCaptcha()
   return get('/captcha')
+}
+
+// ---- Public Key APIs ----
+
+/**
+ * Get the RSA public key for encrypting sensitive data (e.g. passwords).
+ * Response data: { publicKey: "-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----" }
+ */
+export function getPublicKey() {
+  if (USE_MOCK) return mockGetPublicKey()
+  return get('/public-key')
 }
 
 // ---- SMS APIs ----
