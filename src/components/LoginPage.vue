@@ -25,8 +25,8 @@ import {
 } from '../api/auth.js'
 import { QR_POLL_INTERVAL, USE_MOCK } from '../api/config.js'
 
-// Current login method: password | phone | email | wechat-qr | wechat-mp
-const activeTab = ref('password')
+// Current login method: phone | email | password | wechat-qr | wechat-mp
+const activeTab = ref('phone')
 
 // Loading states to prevent duplicate submissions
 const passwordLoginLoading = ref(false)
@@ -616,16 +616,8 @@ onBeforeUnmount(() => {
         <h2 class="login-title">欢迎登录</h2>
         <p class="login-desc">请选择以下方式登录您的账号</p>
 
-        <!-- Primary login method tabs (password + wechat-mp) -->
+        <!-- Primary login method tabs (phone + wechat-mp) -->
         <div class="login-tabs">
-          <div
-            class="tab-item"
-            :class="{ active: activeTab === 'password' }"
-            @click="handleTabChange('password')"
-          >
-            <el-icon><Lock /></el-icon>
-            <span>密码登录</span>
-          </div>
           <div
             class="tab-item"
             :class="{ active: activeTab === 'phone' }"
@@ -634,86 +626,13 @@ onBeforeUnmount(() => {
             <el-icon><Iphone /></el-icon>
             <span>手机验证码登录</span>
           </div>
-        </div>
-
-        <!-- Password login form -->
-        <div v-if="activeTab === 'password'" class="login-form">
-          <el-form :model="passwordForm" size="large">
-            <el-form-item :error="usernameError">
-              <el-input
-                v-model="passwordForm.username"
-                placeholder="请输入用户名"
-                clearable
-                @blur="passwordTouched.username = true"
-              >
-                <template #prefix>
-                  <el-icon><User /></el-icon>
-                </template>
-              </el-input>
-            </el-form-item>
-            <el-form-item :error="passwordError">
-              <el-input
-                v-model="passwordForm.password"
-                :type="passwordVisible ? 'text' : 'password'"
-                placeholder="请输入密码"
-                clearable
-                :show-password="true"
-                @blur="passwordTouched.password = true"
-                @keyup.enter="handlePasswordLogin"
-              >
-                <template #prefix>
-                  <el-icon><Lock /></el-icon>
-                </template>
-              </el-input>
-            </el-form-item>
-            <el-form-item v-if="captchaRequired">
-              <div class="captcha-input-group">
-                <el-input
-                  v-model="captchaCode"
-                  placeholder="请输入图形验证码"
-                  maxlength="6"
-                  clearable
-                  @keyup.enter="handlePasswordLogin"
-                />
-                <div class="captcha-image-wrapper" @click="refreshCaptcha">
-                  <img
-                    v-if="captchaImage"
-                    :src="captchaImage"
-                    alt="图形验证码"
-                    class="captcha-image"
-                  />
-                  <div v-else class="captcha-placeholder">
-                    <el-icon :loading="captchaLoading"><Refresh /></el-icon>
-                  </div>
-                </div>
-              </div>
-            </el-form-item>
-            <el-form-item>
-              <el-button
-                type="primary"
-                class="login-btn"
-                :disabled="!isValidUsername || !passwordForm.password || (captchaRequired && !captchaCode)"
-                :loading="passwordLoginLoading"
-                @click="handlePasswordLogin"
-              >
-                登 录
-              </el-button>
-            </el-form-item>
-          </el-form>
-
-          <!-- Secondary login methods -->
-          <div class="alt-login">
-            <span class="alt-login-label">其他登录方式</span>
-            <div class="alt-login-links">
-              <a class="alt-link" role="button" tabindex="0" @click="handleTabChange('email')" @keyup.enter="handleTabChange('email')">
-                <el-icon><Message /></el-icon>
-                <span>邮箱验证码登录</span>
-              </a>
-              <a class="alt-link" role="button" tabindex="0" @click="handleTabChange('wechat-mp')" @keyup.enter="handleTabChange('wechat-mp')">
-                <el-icon><Promotion /></el-icon>
-                <span>微信公众号登录</span>
-              </a>
-            </div>
+          <div
+            class="tab-item"
+            :class="{ active: activeTab === 'wechat-mp' }"
+            @click="handleTabChange('wechat-mp')"
+          >
+            <el-icon><Promotion /></el-icon>
+            <span>微信公众号登录</span>
           </div>
         </div>
 
@@ -794,9 +713,93 @@ onBeforeUnmount(() => {
           <div class="alt-login">
             <span class="alt-login-label">其他登录方式</span>
             <div class="alt-login-links">
+              <a class="alt-link" role="button" tabindex="0" @click="handleTabChange('password')" @keyup.enter="handleTabChange('password')">
+                <el-icon><Lock /></el-icon>
+                <span>密码登录</span>
+              </a>
               <a class="alt-link" role="button" tabindex="0" @click="handleTabChange('email')" @keyup.enter="handleTabChange('email')">
                 <el-icon><Message /></el-icon>
                 <span>邮箱验证码登录</span>
+              </a>
+              <a class="alt-link" role="button" tabindex="0" @click="handleTabChange('wechat-qr')" @keyup.enter="handleTabChange('wechat-qr')">
+                <el-icon><ChatDotRound /></el-icon>
+                <span>微信扫码登录</span>
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Password login form -->
+        <div v-if="activeTab === 'password'" class="login-form">
+          <el-form :model="passwordForm" size="large">
+            <el-form-item :error="usernameError">
+              <el-input
+                v-model="passwordForm.username"
+                placeholder="请输入用户名"
+                clearable
+                @blur="passwordTouched.username = true"
+              >
+                <template #prefix>
+                  <el-icon><User /></el-icon>
+                </template>
+              </el-input>
+            </el-form-item>
+            <el-form-item :error="passwordError">
+              <el-input
+                v-model="passwordForm.password"
+                placeholder="请输入密码"
+                clearable
+                :show-password="true"
+                @blur="passwordTouched.password = true"
+                @keyup.enter="handlePasswordLogin"
+              >
+                <template #prefix>
+                  <el-icon><Lock /></el-icon>
+                </template>
+              </el-input>
+            </el-form-item>
+            <el-form-item v-if="captchaRequired">
+              <div class="captcha-input-group">
+                <el-input
+                  v-model="captchaCode"
+                  placeholder="请输入图形验证码"
+                  maxlength="6"
+                  clearable
+                  @keyup.enter="handlePasswordLogin"
+                />
+                <div class="captcha-image-wrapper" @click="refreshCaptcha">
+                  <img
+                    v-if="captchaImage"
+                    :src="captchaImage"
+                    alt="图形验证码"
+                    class="captcha-image"
+                  />
+                  <div v-else class="captcha-placeholder">
+                    <el-icon :loading="captchaLoading"><Refresh /></el-icon>
+                  </div>
+                </div>
+              </div>
+            </el-form-item>
+            <el-form-item>
+              <el-button
+                type="primary"
+                class="login-btn"
+                :disabled="!isValidUsername || !passwordForm.password || (captchaRequired && !captchaCode)"
+                :loading="passwordLoginLoading"
+                @click="handlePasswordLogin"
+              >
+                登 录
+              </el-button>
+            </el-form-item>
+          </el-form>
+
+          <!-- Back to primary methods -->
+          <div class="alt-login">
+            <span class="alt-login-label">其他登录方式</span>
+            <div class="alt-login-links">
+              <a class="alt-link" role="button" tabindex="0" @click="handleTabChange('phone')" @keyup.enter="handleTabChange('phone')">
+                <el-icon><Iphone /></el-icon>
+                <span>手机验证码登录</span>
               </a>
               <a class="alt-link" role="button" tabindex="0" @click="handleTabChange('wechat-qr')" @keyup.enter="handleTabChange('wechat-qr')">
                 <el-icon><ChatDotRound /></el-icon>
