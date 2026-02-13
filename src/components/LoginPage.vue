@@ -958,7 +958,7 @@ const showPrivacy = ref(false)
     </div>
 
     <!-- 用户服务协议 Dialog -->
-    <el-dialog v-model="showAgreement" title="用户服务协议" width="680px" top="5vh" destroy-on-close>
+    <el-dialog v-model="showAgreement" title="用户服务协议" width="90%" style="max-width: 680px" top="5vh" destroy-on-close>
       <div class="agreement-content">
         <h3>Mercury 统一登录平台用户服务协议</h3>
         <p><strong>生效日期：</strong>2026年1月1日</p>
@@ -998,7 +998,7 @@ const showPrivacy = ref(false)
     </el-dialog>
 
     <!-- 隐私政策 Dialog -->
-    <el-dialog v-model="showPrivacy" title="隐私政策" width="680px" top="5vh" destroy-on-close>
+    <el-dialog v-model="showPrivacy" title="隐私政策" width="90%" style="max-width: 680px" top="5vh" destroy-on-close>
       <div class="agreement-content">
         <h3>Mercury 统一登录平台隐私政策</h3>
         <p><strong>生效日期：</strong>2026年1月1日</p>
