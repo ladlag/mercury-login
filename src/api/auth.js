@@ -13,10 +13,9 @@
  *
  * GET  /public-key           - Get RSA public key for encrypting sensitive data
  *   Response: { "code": "200", "message": "获取成功",
- *               "data": { "publicKey": "-----BEGIN PUBLIC KEY-----\n...",
- *                         "encrypt": true } }
- *   When encrypt=true, sensitive fields (phone, email, code) are RSA-encrypted
- *   before sending to the backend.
+ *               "data": { "publicKey": "-----BEGIN PUBLIC KEY-----\n..." } }
+ *   When a publicKey is returned, sensitive fields (phone, email, code) are
+ *   RSA-encrypted before sending to the backend.
  *
  * POST /sms/send           - Send SMS verification code
  *   Request:  { "phone": "13800138000" }
@@ -103,34 +102,36 @@ function checkMockResponse(result) {
 
 // ---- Encryption Support ----
 
-/** Cached public key info: { publicKey, encrypt } */
-let cachedKeyInfo = null
-let keyInfoPromise = null
+/** Cached public key (PEM string or null) */
+let cachedPublicKey = null
+let publicKeyFetched = false
+let publicKeyPromise = null
 
 /**
- * Fetch public key from backend and cache it.
- * Response data: { publicKey: "...", encrypt: true/false }
- * The `encrypt` flag indicates whether the backend requires sensitive data encryption.
+ * Fetch RSA public key from backend and cache it.
+ * Response data matches backend PublicKeyResponse: { publicKey: "..." }
+ * If a publicKey is returned, sensitive data will be encrypted before sending.
  * Uses promise-based locking to avoid duplicate concurrent fetches.
  */
-async function fetchKeyInfo() {
-  if (cachedKeyInfo) return cachedKeyInfo
-  if (keyInfoPromise) return keyInfoPromise
-  keyInfoPromise = (async () => {
+async function fetchPublicKey() {
+  if (publicKeyFetched) return cachedPublicKey
+  if (publicKeyPromise) return publicKeyPromise
+  publicKeyPromise = (async () => {
     try {
       const res = await getPublicKey()
-      cachedKeyInfo = res.data
+      cachedPublicKey = res.data?.publicKey || null
     } catch (err) {
       if (import.meta.env.DEV) {
         console.warn('[Auth] Failed to fetch public key, encryption disabled:', err.message || err)
       }
-      cachedKeyInfo = { publicKey: null, encrypt: false }
+      cachedPublicKey = null
     } finally {
-      keyInfoPromise = null
+      publicKeyFetched = true
+      publicKeyPromise = null
     }
-    return cachedKeyInfo
+    return cachedPublicKey
   })()
-  return keyInfoPromise
+  return publicKeyPromise
 }
 
 /**
@@ -160,22 +161,23 @@ async function rsaEncrypt(publicKeyPem, plaintext) {
 }
 
 /**
- * Encrypt sensitive fields in a request body based on the backend's encrypt flag.
- * Only encrypts when the backend public-key response has { encrypt: true }.
+ * Encrypt sensitive fields in a request body if the backend provided a public key.
+ * When the backend returns a publicKey from GET /public-key, sensitive fields are
+ * RSA-encrypted before sending. When no key is available, data is sent as-is.
  *
  * @param {Object} body - Request body object
  * @param {string[]} fields - Field names to encrypt (e.g. ['phone', 'code'])
- * @returns {Promise<Object>} Body with sensitive fields encrypted if required
+ * @returns {Promise<Object>} Body with sensitive fields encrypted if key is available
  */
 async function encryptSensitiveFields(body, fields) {
-  const keyInfo = await fetchKeyInfo()
-  if (!keyInfo.encrypt || !keyInfo.publicKey) {
+  const publicKey = await fetchPublicKey()
+  if (!publicKey) {
     return body
   }
   const encrypted = { ...body }
   for (const field of fields) {
     if (encrypted[field]) {
-      encrypted[field] = await rsaEncrypt(keyInfo.publicKey, encrypted[field])
+      encrypted[field] = await rsaEncrypt(publicKey, encrypted[field])
     }
   }
   return encrypted
