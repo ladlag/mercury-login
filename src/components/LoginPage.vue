@@ -1211,7 +1211,7 @@ const showPrivacy = ref(false)
 
 /* Form */
 .login-form {
-  min-height: 200px;
+  min-height: 330px;
 }
 
 .code-input-group {
