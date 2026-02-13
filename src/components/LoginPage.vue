@@ -48,7 +48,6 @@ const passwordForm = reactive({
   password: '',
 })
 const passwordTouched = reactive({ username: false, password: false })
-const passwordVisible = ref(false)
 
 // Phone login form
 const phoneForm = reactive({
