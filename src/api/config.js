@@ -27,6 +27,12 @@
  *
  * 5. On login success, data contains:
  *    { "token": "jwt-token", "tenantId": "tenant-001", "userId": "user-001", ... }
+ *
+ * 6. Request headers include:
+ *    - X-Request-Id: unique UUID per request for traceability
+ *    - X-Client-Type: "web"
+ *    - X-Tenant-Id: tenant ID from URL query param (when present)
+ *      Carried when site A redirects: ?tenantId=xxx&redirect=http://A.com/gateway
  */
 
 // Base URL for all API requests (matches backend @RequestMapping("/api/auth"))

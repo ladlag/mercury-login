@@ -147,6 +147,7 @@ export async function mockGetPublicKey() {
     message: '获取成功',
     data: {
       publicKey: '-----BEGIN PUBLIC KEY-----\nMIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDMOCK...(mock-key)\n-----END PUBLIC KEY-----',
+      encrypt: false,
     },
   }
 }

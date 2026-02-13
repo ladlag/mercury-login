@@ -13,7 +13,10 @@
  *
  * GET  /public-key           - Get RSA public key for encrypting sensitive data
  *   Response: { "code": "200", "message": "获取成功",
- *               "data": { "publicKey": "-----BEGIN PUBLIC KEY-----\n..." } }
+ *               "data": { "publicKey": "-----BEGIN PUBLIC KEY-----\n...",
+ *                         "encrypt": true } }
+ *   When encrypt=true, sensitive fields (phone, email, code) are RSA-encrypted
+ *   before sending to the backend.
  *
  * POST /sms/send           - Send SMS verification code
  *   Request:  { "phone": "13800138000" }
@@ -98,6 +101,76 @@ function checkMockResponse(result) {
   return result
 }
 
+// ---- Encryption Support ----
+
+/** Cached public key info: { publicKey, encrypt } */
+let cachedKeyInfo = null
+
+/**
+ * Fetch public key from backend and cache it.
+ * Response data: { publicKey: "...", encrypt: true/false }
+ * The `encrypt` flag indicates whether the backend requires sensitive data encryption.
+ */
+async function fetchKeyInfo() {
+  if (cachedKeyInfo) return cachedKeyInfo
+  try {
+    const res = await getPublicKey()
+    cachedKeyInfo = res.data
+  } catch {
+    // If public key fetch fails, default to no encryption
+    cachedKeyInfo = { publicKey: null, encrypt: false }
+  }
+  return cachedKeyInfo
+}
+
+/**
+ * Encrypt a string value with the RSA public key using Web Crypto API.
+ * Returns the base64-encoded ciphertext.
+ */
+async function rsaEncrypt(publicKeyPem, plaintext) {
+  const pemContents = publicKeyPem
+    .replace(/-----BEGIN PUBLIC KEY-----/, '')
+    .replace(/-----END PUBLIC KEY-----/, '')
+    .replace(/\s/g, '')
+  const binaryDer = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0))
+  const cryptoKey = await crypto.subtle.importKey(
+    'spki',
+    binaryDer.buffer,
+    { name: 'RSA-OAEP', hash: 'SHA-256' },
+    false,
+    ['encrypt']
+  )
+  const encoded = new TextEncoder().encode(plaintext)
+  const encrypted = await crypto.subtle.encrypt(
+    { name: 'RSA-OAEP' },
+    cryptoKey,
+    encoded
+  )
+  return btoa(String.fromCharCode(...new Uint8Array(encrypted)))
+}
+
+/**
+ * Encrypt sensitive fields in a request body based on the backend's encrypt flag.
+ * Only encrypts when the backend public-key response has { encrypt: true }.
+ *
+ * @param {Object} body - Request body object
+ * @param {string[]} fields - Field names to encrypt (e.g. ['phone', 'code'])
+ * @returns {Promise<Object>} Body with sensitive fields encrypted if required
+ */
+async function encryptSensitiveFields(body, fields) {
+  const keyInfo = await fetchKeyInfo()
+  if (!keyInfo.encrypt || !keyInfo.publicKey) {
+    return body
+  }
+  const encrypted = { ...body }
+  for (const field of fields) {
+    if (encrypted[field]) {
+      encrypted[field] = await rsaEncrypt(keyInfo.publicKey, encrypted[field])
+    }
+  }
+  return encrypted
+}
+
 // ---- Captcha APIs ----
 
 /**
@@ -123,9 +196,10 @@ export function getPublicKey() {
 // ---- SMS APIs ----
 
 /** Send SMS verification code */
-export function sendSmsCode(phone) {
+export async function sendSmsCode(phone) {
   if (USE_MOCK) return mockSendSmsCode(phone)
-  return post('/sms/send', { phone })
+  const body = await encryptSensitiveFields({ phone }, ['phone'])
+  return post('/sms/send', body)
 }
 
 /** Login with phone + verification code (+ optional captcha) */
@@ -136,15 +210,17 @@ export async function smsLogin(phone, code, captchaId, captchaCode) {
     body.captchaId = captchaId
     body.captchaCode = captchaCode
   }
-  return post('/sms/login', body)
+  const encrypted = await encryptSensitiveFields(body, ['phone', 'code'])
+  return post('/sms/login', encrypted)
 }
 
 // ---- Email APIs ----
 
 /** Send email verification code */
-export function sendEmailCode(email) {
+export async function sendEmailCode(email) {
   if (USE_MOCK) return mockSendEmailCode(email)
-  return post('/email/send', { email })
+  const body = await encryptSensitiveFields({ email }, ['email'])
+  return post('/email/send', body)
 }
 
 /** Login with email + verification code (+ optional captcha) */
@@ -155,7 +231,8 @@ export async function emailLogin(email, code, captchaId, captchaCode) {
     body.captchaId = captchaId
     body.captchaCode = captchaCode
   }
-  return post('/email/login', body)
+  const encrypted = await encryptSensitiveFields(body, ['email', 'code'])
+  return post('/email/login', encrypted)
 }
 
 // ---- WeChat QR APIs ----

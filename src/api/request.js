@@ -21,6 +21,20 @@ function generateRequestId() {
 }
 
 /**
+ * Get the tenant ID from the current page URL query parameters.
+ * When site A redirects to the login page, it carries tenantId in the URL:
+ *   http://IP:PORT/xxxx?tenantId=xxx&redirect=http://A.com/gateway
+ */
+function getTenantId() {
+  try {
+    const params = new URLSearchParams(window.location.search)
+    return params.get('tenantId') || ''
+  } catch {
+    return ''
+  }
+}
+
+/**
  * Make an HTTP request to the backend API.
  *
  * @param {string} url - API endpoint path (relative to base URL)
@@ -40,13 +54,22 @@ export async function request(url, options = {}) {
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT)
 
   try {
+    const defaultHeaders = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'X-Request-Id': generateRequestId(),
+      'X-Client-Type': 'web',
+    }
+
+    const tenantId = getTenantId()
+    if (tenantId) {
+      defaultHeaders['X-Tenant-Id'] = tenantId
+    }
+
     const fetchOptions = {
       method,
       headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'X-Request-Id': generateRequestId(),
-        'X-Client-Type': 'web',
+        ...defaultHeaders,
         ...headers,
       },
       signal: controller.signal,
