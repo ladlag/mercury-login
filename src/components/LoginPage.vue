@@ -7,6 +7,8 @@ import {
   ChatDotRound,
   Promotion,
   Refresh,
+  Lock,
+  User,
 } from '@element-plus/icons-vue'
 import {
   sendSmsCode,
@@ -18,13 +20,16 @@ import {
   generateWechatMp,
   pollWechatMp,
   getCaptcha,
+  getPublicKey,
+  passwordLogin,
 } from '../api/auth.js'
-import { QR_POLL_INTERVAL } from '../api/config.js'
+import { QR_POLL_INTERVAL, USE_MOCK } from '../api/config.js'
 
-// Current login method: phone | email | wechat-qr | wechat-mp
-const activeTab = ref('phone')
+// Current login method: password | phone | email | wechat-qr | wechat-mp
+const activeTab = ref('password')
 
 // Loading states to prevent duplicate submissions
+const passwordLoginLoading = ref(false)
 const phoneCodeLoading = ref(false)
 const phoneLoginLoading = ref(false)
 const emailCodeLoading = ref(false)
@@ -36,6 +41,14 @@ const captchaId = ref('')
 const captchaCode = ref('')
 const captchaImage = ref('')
 const captchaLoading = ref(false)
+
+// Password login form
+const passwordForm = reactive({
+  username: '',
+  password: '',
+})
+const passwordTouched = reactive({ username: false, password: false })
+const passwordVisible = ref(false)
 
 // Phone login form
 const phoneForm = reactive({
@@ -73,6 +86,23 @@ let wechatMpTicket = null
 const redirectUrl = computed(() => {
   const params = new URLSearchParams(window.location.search)
   return params.get('redirect') || ''
+})
+
+// Password validation
+const isValidUsername = computed(() => {
+  return passwordForm.username.length >= 2
+})
+
+const usernameError = computed(() => {
+  if (!passwordTouched.username || !passwordForm.username) return ''
+  if (passwordForm.username.length < 2) return '用户名至少2个字符'
+  return ''
+})
+
+const passwordError = computed(() => {
+  if (!passwordTouched.password || !passwordForm.password) return ''
+  if (passwordForm.password.length < 6) return '密码至少6个字符'
+  return ''
 })
 
 // Phone validation
@@ -183,6 +213,73 @@ function startCountdown(type) {
       }
     }, 1000)
   }
+}
+
+// Password login submit
+async function handlePasswordLogin() {
+  passwordTouched.username = true
+  passwordTouched.password = true
+  if (!isValidUsername.value) {
+    ElMessage.warning('请输入用户名')
+    return
+  }
+  if (!passwordForm.password || passwordForm.password.length < 6) {
+    ElMessage.warning('请输入密码')
+    return
+  }
+  if (captchaRequired.value && !captchaCode.value) {
+    ElMessage.warning('请输入图形验证码')
+    return
+  }
+  if (passwordLoginLoading.value) return
+
+  passwordLoginLoading.value = true
+  try {
+    // In mock mode, send raw password; in production, encrypt with RSA public key
+    let encryptedPassword = passwordForm.password
+    if (!USE_MOCK) {
+      const keyRes = await getPublicKey()
+      encryptedPassword = await encryptWithPublicKey(keyRes.data.publicKey, passwordForm.password)
+    }
+    const res = await passwordLogin(
+      passwordForm.username, encryptedPassword,
+      captchaRequired.value ? captchaId.value : undefined,
+      captchaRequired.value ? captchaCode.value : undefined
+    )
+    ElMessage.success(res.message || '登录成功')
+    captchaRequired.value = false
+    handleLoginSuccess(res.data)
+  } catch (error) {
+    handleApiError(error)
+  } finally {
+    passwordLoginLoading.value = false
+  }
+}
+
+/**
+ * Encrypt password with RSA public key using Web Crypto API.
+ * The backend expects the password encrypted with its RSA public key.
+ */
+async function encryptWithPublicKey(pem, plaintext) {
+  const pemContents = pem
+    .replace(/-----BEGIN PUBLIC KEY-----/, '')
+    .replace(/-----END PUBLIC KEY-----/, '')
+    .replace(/\s/g, '')
+  const binaryDer = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0))
+  const publicKey = await crypto.subtle.importKey(
+    'spki',
+    binaryDer.buffer,
+    { name: 'RSA-OAEP', hash: 'SHA-256' },
+    false,
+    ['encrypt']
+  )
+  const encoded = new TextEncoder().encode(plaintext)
+  const encrypted = await crypto.subtle.encrypt(
+    { name: 'RSA-OAEP' },
+    publicKey,
+    encoded
+  )
+  return btoa(String.fromCharCode(...new Uint8Array(encrypted)))
 }
 
 // Send phone verification code
@@ -520,8 +617,16 @@ onBeforeUnmount(() => {
         <h2 class="login-title">欢迎登录</h2>
         <p class="login-desc">请选择以下方式登录您的账号</p>
 
-        <!-- Primary login method tabs (phone + wechat-mp) -->
+        <!-- Primary login method tabs (password + wechat-mp) -->
         <div class="login-tabs">
+          <div
+            class="tab-item"
+            :class="{ active: activeTab === 'password' }"
+            @click="handleTabChange('password')"
+          >
+            <el-icon><Lock /></el-icon>
+            <span>密码登录</span>
+          </div>
           <div
             class="tab-item"
             :class="{ active: activeTab === 'phone' }"
@@ -530,13 +635,86 @@ onBeforeUnmount(() => {
             <el-icon><Iphone /></el-icon>
             <span>手机验证码登录</span>
           </div>
-          <div
-            class="tab-item"
-            :class="{ active: activeTab === 'wechat-mp' }"
-            @click="handleTabChange('wechat-mp')"
-          >
-            <el-icon><Promotion /></el-icon>
-            <span>微信公众号登录</span>
+        </div>
+
+        <!-- Password login form -->
+        <div v-if="activeTab === 'password'" class="login-form">
+          <el-form :model="passwordForm" size="large">
+            <el-form-item :error="usernameError">
+              <el-input
+                v-model="passwordForm.username"
+                placeholder="请输入用户名"
+                clearable
+                @blur="passwordTouched.username = true"
+              >
+                <template #prefix>
+                  <el-icon><User /></el-icon>
+                </template>
+              </el-input>
+            </el-form-item>
+            <el-form-item :error="passwordError">
+              <el-input
+                v-model="passwordForm.password"
+                :type="passwordVisible ? 'text' : 'password'"
+                placeholder="请输入密码"
+                clearable
+                :show-password="true"
+                @blur="passwordTouched.password = true"
+                @keyup.enter="handlePasswordLogin"
+              >
+                <template #prefix>
+                  <el-icon><Lock /></el-icon>
+                </template>
+              </el-input>
+            </el-form-item>
+            <el-form-item v-if="captchaRequired">
+              <div class="captcha-input-group">
+                <el-input
+                  v-model="captchaCode"
+                  placeholder="请输入图形验证码"
+                  maxlength="6"
+                  clearable
+                  @keyup.enter="handlePasswordLogin"
+                />
+                <div class="captcha-image-wrapper" @click="refreshCaptcha">
+                  <img
+                    v-if="captchaImage"
+                    :src="captchaImage"
+                    alt="图形验证码"
+                    class="captcha-image"
+                  />
+                  <div v-else class="captcha-placeholder">
+                    <el-icon :loading="captchaLoading"><Refresh /></el-icon>
+                  </div>
+                </div>
+              </div>
+            </el-form-item>
+            <el-form-item>
+              <el-button
+                type="primary"
+                class="login-btn"
+                :disabled="!isValidUsername || !passwordForm.password || (captchaRequired && !captchaCode)"
+                :loading="passwordLoginLoading"
+                @click="handlePasswordLogin"
+              >
+                登 录
+              </el-button>
+            </el-form-item>
+          </el-form>
+
+          <!-- Secondary login methods -->
+          <div class="alt-login">
+            <span class="alt-login-label">其他登录方式</span>
+            <div class="alt-login-links">
+              <a class="alt-link" role="button" tabindex="0" @click="handleTabChange('email')" @keyup.enter="handleTabChange('email')">
+                <el-icon><Message /></el-icon>
+                <span>邮箱验证码登录</span>
+              </a>
+              <a class="alt-link" role="button" tabindex="0" @click="handleTabChange('wechat-mp')" @keyup.enter="handleTabChange('wechat-mp')">
+                <el-icon><Promotion /></el-icon>
+                <span>微信公众号登录</span>
+              </a>
+            </div>
           </div>
         </div>
 

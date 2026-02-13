@@ -10,6 +10,8 @@
  *    Set VITE_API_MOCK=false to call real backend APIs.
  *
  * 3. All API endpoints are relative to the base URL. For example:
+ *    GET  {baseURL}/public-key  -> Get RSA public key for password encryption
+ *    POST {baseURL}/password/login -> Password login (encrypted)
  *    POST {baseURL}/sms/send    -> Send phone verification code
  *    POST {baseURL}/sms/login   -> Phone login
  *    POST {baseURL}/email/send  -> Send email verification code
