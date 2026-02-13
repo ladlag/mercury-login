@@ -482,6 +482,10 @@ onBeforeUnmount(() => {
   stopQrPolling('qr')
   stopQrPolling('mp')
 })
+
+// Agreement / Privacy dialog
+const showAgreement = ref(false)
+const showPrivacy = ref(false)
 </script>
 
 <template>
@@ -941,9 +945,9 @@ onBeforeUnmount(() => {
         <!-- Agreement -->
         <div class="login-agreement">
           登录即表示同意
-          <a href="javascript:void(0)">《用户服务协议》</a>
+          <a href="javascript:void(0)" @click.prevent="showAgreement = true">《用户服务协议》</a>
           和
-          <a href="javascript:void(0)">《隐私政策》</a>
+          <a href="javascript:void(0)" @click.prevent="showPrivacy = true">《隐私政策》</a>
         </div>
       </div>
     </div>
@@ -952,6 +956,98 @@ onBeforeUnmount(() => {
     <div class="login-footer">
       <span>© {{ new Date().getFullYear() }} Mercury · 统一登录平台</span>
     </div>
+
+    <!-- 用户服务协议 Dialog -->
+    <el-dialog v-model="showAgreement" title="用户服务协议" width="680px" top="5vh" destroy-on-close>
+      <div class="agreement-content">
+        <h3>Mercury 统一登录平台用户服务协议</h3>
+        <p><strong>生效日期：</strong>2026年1月1日</p>
+        <p>欢迎您使用 Mercury 统一登录平台（以下简称"本平台"）。请您在使用前仔细阅读本协议的全部内容。一旦您使用本平台服务，即视为您已阅读、理解并同意接受本协议的约束。</p>
+
+        <h4>一、服务说明</h4>
+        <p>本平台为用户提供统一身份认证服务，包括但不限于手机验证码登录、邮箱验证码登录、微信扫码登录等方式。本平台仅提供身份认证服务，不直接提供其他业务功能。</p>
+
+        <h4>二、账号注册与使用</h4>
+        <p>1. 您在使用本平台时，需提供真实、准确、完整的个人信息，并在信息变更时及时更新。</p>
+        <p>2. 您应妥善保管自己的账号和密码信息，因您个人原因导致账号信息泄露所造成的损失由您自行承担。</p>
+        <p>3. 您不得将账号转让、出借或以任何方式提供给他人使用。</p>
+
+        <h4>三、用户行为规范</h4>
+        <p>1. 您在使用本平台服务时，应遵守国家法律法规及相关规定。</p>
+        <p>2. 您不得利用本平台从事任何违法、违规或侵害他人合法权益的行为。</p>
+        <p>3. 您不得对本平台进行反向工程、反编译或以其他方式尝试获取本平台的源代码。</p>
+        <p>4. 您不得以任何方式干扰本平台的正常运行，包括但不限于恶意攻击、传播病毒等。</p>
+
+        <h4>四、知识产权</h4>
+        <p>本平台的所有内容，包括但不限于文字、图片、界面设计、程序代码等，均受知识产权法律保护。未经本平台书面许可，任何人不得以任何方式使用。</p>
+
+        <h4>五、服务变更与中断</h4>
+        <p>1. 本平台有权根据业务需要修改或中断服务，并在合理时间内通知用户。</p>
+        <p>2. 因不可抗力或系统维护等原因导致的服务中断，本平台不承担责任。</p>
+
+        <h4>六、免责声明</h4>
+        <p>1. 本平台不对因网络中断、系统故障等非本平台原因造成的损失承担责任。</p>
+        <p>2. 本平台对通过本服务获取的信息的准确性、完整性不作保证。</p>
+
+        <h4>七、协议修改</h4>
+        <p>本平台有权随时修改本协议内容，修改后的协议将在本平台公布。您继续使用本平台服务即表示同意接受修改后的协议。</p>
+
+        <h4>八、联系方式</h4>
+        <p>如您对本协议有任何疑问，请通过本平台提供的联系方式与我们取得联系。</p>
+      </div>
+    </el-dialog>
+
+    <!-- 隐私政策 Dialog -->
+    <el-dialog v-model="showPrivacy" title="隐私政策" width="680px" top="5vh" destroy-on-close>
+      <div class="agreement-content">
+        <h3>Mercury 统一登录平台隐私政策</h3>
+        <p><strong>生效日期：</strong>2026年1月1日</p>
+        <p>Mercury 统一登录平台（以下简称"本平台"）非常重视用户的隐私保护。本隐私政策旨在说明我们如何收集、使用、存储和保护您的个人信息。</p>
+
+        <h4>一、信息收集</h4>
+        <p>我们可能收集以下类型的信息：</p>
+        <p>1. <strong>手机号码：</strong>用于手机验证码登录、账号绑定和安全验证。</p>
+        <p>2. <strong>邮箱地址：</strong>用于邮箱验证码登录、账号绑定和通知发送。</p>
+        <p>3. <strong>微信标识信息：</strong>用于微信扫码登录，包括微信 OpenID 等必要标识。</p>
+        <p>4. <strong>设备信息：</strong>包括设备型号、操作系统版本、浏览器类型等，用于安全风控和服务优化。</p>
+        <p>5. <strong>日志信息：</strong>包括登录时间、IP 地址等，用于安全审计和异常检测。</p>
+
+        <h4>二、信息使用</h4>
+        <p>我们收集的信息将用于以下目的：</p>
+        <p>1. 提供身份认证和登录服务。</p>
+        <p>2. 保障账号安全，进行风险检测和防范。</p>
+        <p>3. 改善和优化我们的服务。</p>
+        <p>4. 遵守法律法规的要求。</p>
+
+        <h4>三、信息存储与保护</h4>
+        <p>1. 我们采用加密传输（如 RSA、HTTPS）等安全措施保护您的信息在传输过程中的安全。</p>
+        <p>2. 您的个人信息存储在安全的服务器上，我们采取严格的数据访问控制措施。</p>
+        <p>3. 我们仅在实现服务目的所必需的期限内保留您的个人信息。</p>
+
+        <h4>四、信息共享</h4>
+        <p>1. 未经您的同意，我们不会向第三方共享您的个人信息，但以下情况除外：</p>
+        <p>&nbsp;&nbsp;&nbsp;a. 根据法律法规的要求或政府主管部门的要求提供。</p>
+        <p>&nbsp;&nbsp;&nbsp;b. 为维护本平台的合法权益所必需。</p>
+        <p>2. 当您使用本平台登录第三方应用时，我们仅向第三方应用提供认证结果（Token），不会传输您的原始个人信息。</p>
+
+        <h4>五、您的权利</h4>
+        <p>1. 您有权访问和更正您的个人信息。</p>
+        <p>2. 您有权删除您的账号及相关信息。</p>
+        <p>3. 您有权撤回对个人信息处理的同意。</p>
+
+        <h4>六、Cookie 和类似技术</h4>
+        <p>本平台可能使用 Cookie 和类似技术来维持登录状态和改善用户体验。您可以通过浏览器设置管理 Cookie。</p>
+
+        <h4>七、未成年人保护</h4>
+        <p>我们非常重视对未成年人信息的保护。如您是未满 18 周岁的未成年人，请在监护人指导下使用本平台服务。</p>
+
+        <h4>八、隐私政策更新</h4>
+        <p>我们可能会不时更新本隐私政策。更新后的政策将在本平台公布，请您定期查阅。</p>
+
+        <h4>九、联系我们</h4>
+        <p>如您对本隐私政策有任何疑问或建议，请通过本平台提供的联系方式与我们取得联系。</p>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -1479,5 +1575,30 @@ onBeforeUnmount(() => {
   --el-button-hover-border-color: #6366f1;
   color: #6366f1;
   border-color: #6366f1;
+}
+
+.agreement-content {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 0 8px;
+  line-height: 1.8;
+  color: #333;
+  font-size: 14px;
+}
+
+.agreement-content h3 {
+  text-align: center;
+  margin-bottom: 16px;
+  color: #1a1a1a;
+}
+
+.agreement-content h4 {
+  margin: 20px 0 8px;
+  color: #1a1a1a;
+}
+
+.agreement-content p {
+  margin: 6px 0;
+  text-indent: 0;
 }
 </style>
