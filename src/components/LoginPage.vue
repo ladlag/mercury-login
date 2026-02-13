@@ -128,7 +128,7 @@ function switchBanner(index) {
 }
 
 function handleBannerClick(banner) {
-  if (banner.link) {
+  if (banner.link && /^https?:\/\//.test(banner.link)) {
     window.open(banner.link, '_blank', 'noopener,noreferrer')
   }
 }

@@ -366,8 +366,8 @@ export async function mockGetBanners() {
           type: 'ad',
           title: '新功能上线',
           subtitle: '支持企业微信一键登录',
-          imageUrl: '',
-          link: '',
+          imageUrl: '',  // Full URL to banner image, e.g. 'https://cdn.example.com/banner.png'
+          link: '',      // Click-through URL (must be http/https), e.g. 'https://example.com/promo'
           background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
         },
       ],
